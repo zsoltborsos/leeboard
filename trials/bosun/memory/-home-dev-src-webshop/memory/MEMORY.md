@@ -1,0 +1,4 @@
+- [Codegen after schema changes](codegen-after-schema.md) — run pnpm codegen with every schema change
+- [Staging URL](staging-url.md) — staging moved on 2026-11-10
+- [Roadmap](roadmap.md) — Q1 2027 plans
+- [Cart module](cart-module.md) — where the cart state lives

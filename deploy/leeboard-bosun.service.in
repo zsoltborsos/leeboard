@@ -1,0 +1,10 @@
+[Unit]
+Description=Leeboard: daily Bosun pass, then commit and push the store
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/leeboard/bosun.env
+ExecStart=@REPO@/deploy/bosun-daily.sh
+Nice=10
+TimeoutStartSec=45min

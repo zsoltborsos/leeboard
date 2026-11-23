@@ -1,0 +1,189 @@
+{
+  "budget": 40,
+  "protected": [
+    "rule-never-run-sudo-yourself-hand-the-owner-the-1a01",
+    "rule-never-force-push-a-shared-branch-1a02",
+    "hold-don-t-deploy-webshop-until-the-payment-m-1c01",
+    "rule-no-blog-deploys-on-fridays-ba52"
+  ],
+  "duplicates": [
+    {
+      "ids": [
+        "rule-install-dependencies-with-pnpm-never-npm-2b01",
+        "rule-use-pnpm-for-installs-not-npm-2b02"
+      ],
+      "note": "Same rule twice in global; the owner's wording should survive."
+    },
+    {
+      "ids": [
+        "rule-ask-before-changing-the-webshop-database-2c01",
+        "rule-get-the-owner-s-ok-before-any-schema-mig-2c02",
+        "rule-schema-changes-in-webshop-need-owner-app-2c03"
+      ],
+      "note": "Three agent-written wordings of one webshop rule."
+    },
+    {
+      "ids": [
+        "rule-bind-dev-servers-to-127-0-0-1-1b02",
+        "rule-don-t-expose-local-servers-on-every-net-ae01"
+      ],
+      "note": "Same rule in machine with no shared wording."
+    },
+    {
+      "ids": [
+        "rule-use-stripe-test-mode-for-webshop-s-local-5e01",
+        "rule-never-run-webshop-checkout-locally-in-st-af01"
+      ],
+      "note": "A duplicate only once 5e01 moves out of global into project:webshop."
+    }
+  ],
+  "decidable": [
+    {
+      "winner": "rule-open-a-pull-request-for-every-blog-chang-3d02",
+      "loser": "rule-commit-straight-to-main-in-the-blog-3d01",
+      "note": "user-stated beats agent-inferred."
+    },
+    {
+      "winner": "rule-don-t-edit-changelog-md-release-notes-com-3c02",
+      "loser": "rule-add-a-changelog-md-entry-with-every-webs-3c01",
+      "note": "Both user-stated; the newer one is dated and says it replaces the older."
+    },
+    {
+      "winner": "rule-write-webshop-ui-copy-in-british-englis-ad01",
+      "loser": "rule-use-american-spelling-in-webshop-ui-cop-ad02",
+      "note": "The agent entry is newer, but user-stated beats agent-inferred."
+    }
+  ],
+  "undecidable": [
+    {
+      "ids": [
+        "rule-run-the-full-test-suite-before-every-com-4d01",
+        "rule-don-t-run-the-full-test-suite-locally-ci-4d02"
+      ],
+      "note": "Both user-stated, written in the same seed at the same second: no recency or authorship to decide by."
+    },
+    {
+      "ids": [
+        "hold-don-t-merge-to-webshop-main-during-the-r-4c01",
+        "grant-the-release-session-may-merge-to-webshop-4c02",
+        "reference-webshop-releases-are-cut-from-relea-4c03"
+      ],
+      "core": [
+        "hold-don-t-merge-to-webshop-main-during-the-r-4c01",
+        "grant-the-release-session-may-merge-to-webshop-4c02"
+      ],
+      "note": "The hold names the release session; the grant says it may merge at any time. Same author, five minutes apart. The release-branch reference is context and must stay."
+    }
+  ],
+  "rescope": [
+    {
+      "id": "rule-use-stripe-test-mode-for-webshop-s-local-5e01",
+      "scope": "project:webshop",
+      "note": "Names webshop."
+    },
+    {
+      "id": "reference-the-gpu-box-is-reachable-as-gpu-lan-5e02",
+      "scope": "machine",
+      "note": "A fact about this laptop's network."
+    }
+  ],
+  "retire": [
+    {
+      "id": "reference-webshop-prices-are-computed-in-src-6c01",
+      "note": "Code fact."
+    },
+    {
+      "id": "rule-fix-the-flaky-cart-test-next-sprint-6c02",
+      "note": "Scheduled fix, mirrored."
+    },
+    {
+      "id": "rule-status-blog-migration-to-astro-is-60-do-6d01",
+      "note": "Status update."
+    }
+  ],
+  "flag": [
+    {
+      "id": "rule-plan-ship-the-blog-redesign-in-december-7a01",
+      "note": "A plan, but the owner's words: flag, never revoke."
+    },
+    {
+      "id": "rule-no-blog-deploys-on-fridays-ba52",
+      "note": "Its note was deleted, but it is the owner's words: flag, never revoke."
+    }
+  ],
+  "tighten": [
+    {
+      "id": "rule-docker-notes-ac01",
+      "title": "Docker notes",
+      "note": "Topic title; the body is the instruction."
+    }
+  ],
+  "staleRefs": [
+    {
+      "id": "rule-back-up-the-projects-disk-before-any-os-ab03",
+      "old": "reference-the-backup-nas-is-nas-lan-ab01",
+      "current": "reference-the-backup-nas-is-nas2-lan-ab02",
+      "note": "The citation can move to the replacement without changing the rule."
+    }
+  ],
+  "expendable": [
+    "rule-keep-commit-subjects-under-72-characters-c002",
+    "rule-name-the-issue-number-in-the-commit-body-c004",
+    "rule-prefer-rg-over-grep-r-when-searching-a-r-c008",
+    "rule-quote-every-variable-expansion-in-shell-c006",
+    "rule-run-shellcheck-on-shell-scripts-before-c-c007",
+    "rule-start-bash-scripts-with-set-euo-pipefail-c005",
+    "rule-wrap-commit-message-bodies-at-72-columns-c003",
+    "rule-write-commit-subjects-in-the-imperative-c001"
+  ],
+  "mirror": {
+    "new": [
+      {
+        "path": "-home-dev-src-webshop/memory/codegen-after-schema.md",
+        "scopes": [
+          "project:webshop"
+        ]
+      },
+      {
+        "path": "-home-dev-src-blog/memory/small-prs.md",
+        "scopes": [
+          "global"
+        ],
+        "note": "Written in blog, true everywhere: scope by content."
+      }
+    ],
+    "changed": [
+      {
+        "path": "-home-dev-src-webshop/memory/staging-url.md",
+        "entry": "reference-webshop-staging-is-at-staging-old-8c01"
+      }
+    ],
+    "skip": [
+      {
+        "path": "-home-dev-src-webshop/memory/roadmap.md",
+        "note": "Plan."
+      },
+      {
+        "path": "-home-dev-src-webshop/memory/cart-module.md",
+        "note": "Code fact."
+      },
+      {
+        "path": "-home-dev-src-blog/memory/node-version.md",
+        "note": "Restates revoked reference-the-blog-builds-with-node-20-9d01."
+      }
+    ],
+    "represented": [
+      {
+        "path": "-home-dev-src-blog/memory/pipefail-before-commit.md",
+        "entry": "rule-set-pipefail-before-chaining-tests-into-g-1a04",
+        "note": "Changed since the watermark, but only reworded."
+      }
+    ],
+    "deleted": [
+      {
+        "path": "-home-dev-src-webshop/memory/review-apps.md",
+        "entry": "reference-webshop-review-apps-are-at-pr-numb-ba51"
+      }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+- [Small PRs](small-prs.md) — keep PRs under ~300 lines everywhere
+- [Node version](node-version.md) — blog builds with Node 20
+- [Pipefail before commit](pipefail-before-commit.md) — pipefail before chaining tests into git commit

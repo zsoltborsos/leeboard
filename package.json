@@ -1,0 +1,51 @@
+{
+  "name": "leeboard",
+  "version": "0.1.0",
+  "description": "Shared memory and coordination board for coding agents: rules, holds and handoffs every session reads before it starts work",
+  "keywords": [
+    "ai",
+    "agents",
+    "coding-agents",
+    "memory",
+    "coordination",
+    "cli",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "author": "Zsolt Borsos <zsoltborsos@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zsoltborsos/leeboard.git"
+  },
+  "homepage": "https://github.com/zsoltborsos/leeboard#readme",
+  "type": "module",
+  "bin": {
+    "lb": "dist/cli.js",
+    "leeboard": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "bosun/",
+    "deploy/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/cli.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}

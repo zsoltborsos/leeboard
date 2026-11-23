@@ -1,0 +1,10 @@
+[Unit]
+Description=Leeboard: run the Bosun pass daily
+
+[Timer]
+OnCalendar=*-*-* 06:30
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
