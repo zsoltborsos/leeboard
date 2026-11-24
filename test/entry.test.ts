@@ -60,7 +60,6 @@ Prod ops and Helmraiser runs contend for the same tunnel.
       holder: 'api-93',
       to: 'harness:pi',
       supersedes: ['rule-a-0001', 'rule-b-0002'],
-      source: '~/.claude/projects/-mnt-x/memory/y.md',
       blocks: ['a', 'b'],
       body: '',
     };

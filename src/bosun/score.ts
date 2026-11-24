@@ -105,10 +105,9 @@ function fileOf(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 
-/** The entry cites the note when a `Source:` line (or the source field) names the note's file. */
+/** The entry cites the note when a `Source:` line names the note's file. */
 function cites(entry: Entry, path: string): boolean {
   const file = fileOf(path);
-  if (entry.source?.includes(file)) return true;
   return entry.body.split('\n').some((line) => /^\s*source:/i.test(line) && line.includes(file));
 }
 

@@ -14,7 +14,7 @@ function world() {
     home: tempDir(), cwd: tempDir(), now: new Date('2026-10-22T12:00:00Z'),
     identity: { harness: 'pi', session: 'reviser', origin: 'agent-inferred' },
   };
-  const entry = sampleEntry({ until: '2027-01-01', release: 'Owner says so', holder: 'owner', to: 'any', blocks: ['push'], body: 'Old body\n', source: '/memory/file', supersedes: ['rule-old-0000'] });
+  const entry = sampleEntry({ until: '2027-01-01', release: 'Owner says so', holder: 'owner', to: 'any', blocks: ['push'], body: 'Old body\n', supersedes: ['rule-old-0000'] });
   writeEntry(ctx.home, entry);
   return { ctx, entry };
 }

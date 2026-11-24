@@ -64,7 +64,6 @@ export interface Entry {
   holder?: string;
   to?: string;
   supersedes?: string[];
-  source?: string;
   body: string;
 }
 
@@ -99,7 +98,6 @@ export function serializeEntry(entry: Entry): string {
       holder: entry.holder,
       to: entry.to,
       supersedes: entry.supersedes,
-      source: entry.source,
     },
     entry.body,
   );
@@ -144,7 +142,7 @@ export function parseEntry(text: string): Entry {
     updated: required(data, 'updated'),
     body,
   };
-  for (const key of ['until', 'release', 'holder', 'to', 'source'] as const) {
+  for (const key of ['until', 'release', 'holder', 'to'] as const) {
     if (data[key] !== undefined) entry[key] = String(data[key]);
   }
   for (const key of ['blocks', 'supersedes'] as const) {

@@ -100,7 +100,6 @@ Required: `id`, `kind`, `scope`, `status`, `title`, `created`, `updated`. Option
 | `holder` | grant (required) | Who holds the grant |
 | `to` | handoff, request (required) | Target (section 3) |
 | `supersedes` | any | Ids this entry replaces |
-| `source` | any | Provenance, for example the file a mirrored entry came from |
 
 Ids are `<kind>-<slug of the title, up to 40 characters>-<4 hex digits>`. The kind prefix
 lets a scan select files by name alone. Every command accepts a unique prefix of an id.
@@ -146,7 +145,7 @@ Each applies only to an active entry; otherwise it exits 5. Purge is the excepti
 `holder` or `to` of an active entry. It needs at least one of these (exit 1 otherwise).
 Omitted fields stay as they were. An empty body or block list clears that field; an empty
 title or a missing required field is invalid. It keeps the id, kind, origin, author,
-creation time, source and supersedes links. It refuses `--kind`, `--origin` and
+creation time and supersedes links. It refuses `--kind`, `--origin` and
 `--status`. Merges and genuine replacements use supersede instead.
 
 Each revision appends `{ts, harness, session, before}` to `revisions/<id>.jsonl`, where
