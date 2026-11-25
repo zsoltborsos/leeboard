@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { briefCommand } from './commands/brief.js';
-import { bosun, renderBosun } from './commands/bosun.js';
+import { bosunCommand } from './commands/bosun.js';
 import { checkCommand } from './commands/check.js';
 import { deltaCommand } from './commands/delta.js';
 import { usageCommand } from './commands/usage.js';
@@ -15,7 +15,7 @@ import { resolveIdentity } from './identity.js';
 import { projectCommand } from './commands/project.js';
 import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './commands/purge.js';
 import { resolveHome } from './store.js';
-import { jsonLine, ok, type RunResult } from './result.js';
+import { ok, type RunResult } from './result.js';
 
 const USAGE = `Usage: lb <command> [options]
 
@@ -187,27 +187,19 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       return checkCommand(ctx(), { tag: values.blocks ?? '', json: values.json });
     case 'usage':
       return usageCommand(home, values);
-    case 'bosun': {
-      if (values.full) {
-        if (values['dry-run'] || values.quick) throw usageError('bosun --full does not combine with --quick or --dry-run');
-        // Loaded only here, so brief, delta and check never pay for the runner code.
-        const { bosunFullCommand } = await import('./commands/bosun-full.js');
-        return bosunFullCommand(
-          { home, ctx, env, cwd },
-          {
-            runner: values.runner,
-            model: values.model,
-            thinking: values.thinking,
-            memoryRoot: values['memory-root'],
-            timeout: values.timeout,
-            ifChanged: values['if-changed'],
-            json: values.json,
-          },
-        );
-      }
-      const report = bosun(ctx(), { dryRun: values['dry-run'] });
-      return ok(values.json ? jsonLine(report) : renderBosun(report));
-    }
+    case 'bosun':
+      return bosunCommand({ home, ctx, env, cwd }, {
+        full: values.full,
+        quick: values.quick,
+        dryRun: values['dry-run'],
+        runner: values.runner,
+        model: values.model,
+        thinking: values.thinking,
+        memoryRoot: values['memory-root'],
+        timeout: values.timeout,
+        ifChanged: values['if-changed'],
+        json: values.json,
+      });
 
     case 'project':
       return projectCommand(home, args, values, ctx);

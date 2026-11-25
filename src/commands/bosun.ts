@@ -4,7 +4,10 @@ import { join, sep } from 'node:path';
 import { expireLapsed } from '../change.js';
 import type { Ctx } from '../context.js';
 import { entryIdsIn, isActive, staleHoldDays, summarize, type Summary } from '../entry.js';
+import { usageError } from '../errors.js';
 import { listProjects } from '../projects.js';
+import { jsonLine, ok, type RunResult } from '../result.js';
+import type { FullContext, FullFlags } from './bosun-full.js';
 import { createSuccessorResolver, listEntriesWithDiagnostics, type UnreadableEntryFile } from '../store.js';
 
 export interface BosunReport {
@@ -19,6 +22,31 @@ export interface BosunReport {
   duplicates: { scope: string; title: string; entries: Summary[] }[];
   staleHolds: { entry: Summary; untouchedDays: number }[];
   unreadable: UnreadableEntryFile[];
+}
+
+interface BosunFlags extends FullFlags {
+  full?: boolean;
+  quick?: boolean;
+  dryRun?: boolean;
+}
+
+export async function bosunCommand(context: FullContext, flags: BosunFlags): Promise<RunResult> {
+  if (flags.full) {
+    if (flags.dryRun || flags.quick) throw usageError('bosun --full does not combine with --quick or --dry-run');
+    // Loaded only here, so brief, delta and check never pay for the runner code.
+    const { bosunFullCommand } = await import('./bosun-full.js');
+    return bosunFullCommand(context, {
+      runner: flags.runner,
+      model: flags.model,
+      thinking: flags.thinking,
+      memoryRoot: flags.memoryRoot,
+      timeout: flags.timeout,
+      ifChanged: flags.ifChanged,
+      json: flags.json,
+    });
+  }
+  const report = bosun(context.ctx(), { dryRun: flags.dryRun });
+  return ok(flags.json ? jsonLine(report) : renderBosun(report));
 }
 
 /** Deterministic maintenance across the whole store, not just the caller's scope. */

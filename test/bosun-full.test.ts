@@ -327,6 +327,21 @@ describe('lb bosun --full', () => {
     expect(existsSync(join(w.home, 'state', 'bosun'))).toBe(false);
   });
 
+  it.each(['--quick', '--dry-run'])('refuses --full with %s before resolving identity or writing', async (flag) => {
+    const w = world();
+    const env = { ...w.env, LEEBOARD_HOME: w.home };
+    const before = readFileSync(join(w.home, 'log.jsonl'));
+    for (const identity of [[], ['--harness', 'nobody']]) {
+      expect(await lb(['bosun', '--full', flag, ...identity], env)).toEqual({
+        code: 1, stdout: '', stderr: 'lb: bosun --full does not combine with --quick or --dry-run\n',
+      });
+    }
+    expect(readFileSync(join(w.home, 'log.jsonl'))).toEqual(before);
+    expect(findEntry(w.home, 'hold-lapsed-0002').status).toBe('active');
+    expect(existsSync(join(w.home, 'state', 'bosun'))).toBe(false);
+    expect(existsSync(w.env.FAKE_RUNNER_LOG!)).toBe(false);
+  });
+
   it('keeps the full-pass code out of the hot path: the built CLI only imports it lazily', () => {
     requireBuild();
     const bin = readFileSync(CLI, 'utf8');
@@ -335,6 +350,10 @@ describe('lb bosun --full', () => {
     const source = readFileSync(join(import.meta.dirname, '..', 'dist', 'run.js'), 'utf8');
     expect(source).not.toMatch(/^import[^;]*bosun-full/m);
     expect(source).not.toMatch(/^import[^;]*\/bosun\//m);
-    expect(source).toContain("import('./commands/bosun-full.js')");
+    expect(source).toContain("from './commands/bosun.js'");
+    const bosunSource = readFileSync(join(import.meta.dirname, '..', 'dist', 'commands', 'bosun.js'), 'utf8');
+    expect(bosunSource).not.toMatch(/^import[^;]*bosun-full/m);
+    expect(bosunSource).not.toMatch(/^import[^;]*\/bosun\//m);
+    expect(bosunSource).toContain("import('./bosun-full.js')");
   });
 });
