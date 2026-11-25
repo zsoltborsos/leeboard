@@ -26,6 +26,10 @@ First public release.
   owner's word, logging one `purged` line. Bosun and unattended runners cannot purge.
 - `lb list` and `lb search` show active entries only; `--all` adds closed ones. A list
   filtered by `--session` or `--harness` still shows every status.
+- Entries still active on disk past `until` are excluded from active list/search views
+  and displayed as `lapsed` in all-status views and show (text/JSON).
+  `lb list --status lapsed` selects them. This is display-only; reads change neither
+  entries nor log, and Bosun still persists `expired`.
 - `lb review`, the owner's digest of new, changed and closed entries, and `lb usage`, a
   count of observed brief and check calls with sample sizes.
 - In-place revision of entries with archived previous versions, and a store-wide lock for

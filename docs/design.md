@@ -66,7 +66,8 @@ is strict and why Bosun enforces a line budget (section 10).
 **Statuses.** `active`, `released`, `revoked`, `superseded`, `done`, `retired`, `expired`.
 An entry is *active* when its status is `active` and its `until`, if any, has not passed.
 A date-only `until` runs to the end of that UTC day. No command sets `retired`; it is
-accepted when a file is read.
+accepted when a file is read. An entry still stored as `active` past its `until` displays
+as `lapsed` until Bosun writes `expired`. `lapsed` is display-only, never a stored status.
 
 ## 4. Entry file
 
@@ -306,8 +307,11 @@ lb bosun --full --runner <pi|claude> --model <id> [--thinking <level>]
 `--body -` reads the body from standard input. A new entry's scope defaults to the
 resolved project, else `global`. `lb search` is a case-insensitive substring match over
 titles and bodies, across all scopes. `lb list` and `lb search` show active entries only;
-`--all` adds closed ones. A list filtered by author (`--session`, `--harness`) shows every
-status unless `--status` is given, since it answers "what did this run write".
+`--all` adds closed and lapsed ones. Active views exclude lapsed entries;
+`lb list --status lapsed` selects exactly those entries. `lb show` reports `lapsed` in
+both text and JSON. These reads never expire entries or write the store or log.
+A list filtered by author (`--session`, `--harness`) shows every status unless
+`--status` is given, since it answers "what did this run write".
 
 **Exit codes.** 0 success, 1 usage error, 2 credential rejected, 3 `check` blocked, 4
 unknown or ambiguous id, 5 disallowed transition, 6 not permitted.
@@ -458,8 +462,9 @@ git history. Deleting is the owner's `lb purge` (section 4.1).
 Only expiry changes the store. `--dry-run` shows what would expire. Other findings are
 for the owner, or for the full pass.
 
-The quick pass does not run on its own: `lb brief` simply ignores lapsed entries. Run it
-from the daily job (`deploy/README.md`) or by hand.
+The quick pass does not run on its own: active views simply ignore lapsed entries;
+list/search all-status views and show display them as `lapsed`. Run the quick pass
+from the daily job (`deploy/README.md`) or by hand to persist `expired`.
 
 ### 10.2 Full pass
 

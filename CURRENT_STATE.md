@@ -48,9 +48,4 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 npm run build && npm test && npm run typecheck
 ```
 
-734 tests pass in 29 files. `LEEBOARD_PERF=1 npm test` also runs the opt-in timing tests.
-
-## Known limits
-
-- The quick pass runs only when called (`lb bosun`, the daily job, or at the start of a
-  full pass); `lb brief` ignores lapsed entries but does not expire them.
+752 tests pass in 29 files. `LEEBOARD_PERF=1 npm test` also runs the opt-in timing tests.

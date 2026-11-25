@@ -131,11 +131,15 @@ EOF
 
 lb brief --cwd ~/code/webshop     # what a session sees at start
 lb show <id>                      # read one entry (a unique id prefix is enough)
-lb search pipefail                # find active entries by text (--all adds closed ones)
+lb list --status lapsed           # active on disk, but past their until date
+lb search pipefail                # find active entries (--all adds closed and lapsed ones)
 lb delta --session "$SESSION_ID"  # what other sessions changed since your brief
 lb review                         # the owner's digest of what changed
 lb usage                          # how often briefs and checks actually ran
 ```
+
+Active list/search views exclude entries past their `until`. All-status views and
+`lb show` report them as `lapsed` without writing the store; Bosun later expires them.
 
 Run `lb --help` for every command. `lb --version` (or `lb -v`) prints the installed
 Leeboard package version. `lb release`, `ack`, `reply`, `close`, `revoke`,
