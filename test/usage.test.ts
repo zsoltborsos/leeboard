@@ -272,24 +272,24 @@ describe('brief and check recording', () => {
     expect(readUsage(home)).toEqual([]);
   });
 
-  it('leaves brief data/text and check result unchanged when the usage log is unusable', () => {
+  it.each([false, true])('leaves brief data/text and check result unchanged when the usage log is unusable (json=%s)', (json) => {
     const { home, repo } = projectWorld();
     const ctx = ctxFor(home, repo);
     createEntry(ctx, { kind: 'hold', title: 'No deploys', release: 'r', blocks: ['deploy'] });
 
-    const firstBrief = briefCommand(ctx, { json: true });
+    const firstData = brief(ctx);
+    const firstBrief = briefCommand(ctx, { json });
     const firstCheck = checkCommand(ctx, { tag: 'deploy', json: false });
     rmSync(join(home, 'state', 'usage.jsonl'), { force: true });
     mkdirSync(join(home, 'state', 'usage.jsonl'), { recursive: true });
 
-    const secondBrief = briefCommand(ctx, { json: true });
+    const secondBrief = briefCommand(ctx, { json });
     const secondCheck = checkCommand(ctx, { tag: 'deploy', json: false });
     expect(firstBrief).toMatchObject({ code: 0, stderr: '' });
     expect(secondBrief).toEqual(firstBrief);
-    const firstData = JSON.parse(firstBrief.stdout) as BriefData;
-    const secondData = JSON.parse(secondBrief.stdout) as BriefData;
-    expect(secondData).toEqual(firstData);
-    expect(renderBrief(secondData)).toEqual(renderBrief(firstData));
+    expect(brief(ctx)).toEqual(firstData);
+    if (json) expect(JSON.parse(secondBrief.stdout)).toEqual(firstData);
+    else expect(secondBrief.stdout).toBe(renderBrief(firstData));
     expect(secondCheck).toEqual(firstCheck);
   });
 

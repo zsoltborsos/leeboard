@@ -17,17 +17,14 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   `lapsed`, without changing the stored entry or log. Reads use the context clock;
   supersede chains ending at lapsed entries have no current replacement.
   `lb --version` / `lb -v` prints the installed package version.
-- **Command modules.** `check`, `review`, `delta` and `purge` own their finished command
-  results through flags-object interfaces; `src/result.ts` supplies `RunResult`,
-  `result`, `ok` and `jsonLine`. Review's enriched query is `reviewDetails`.
-  Purge's command lives in `src/commands/purge.ts`, separate from its store operation;
-  command usage errors use `usageError` in `src/errors.ts`. Entry writes and `init` now
-  return finished results from `src/commands/write.ts`, sharing one field mapping for
-  creation and revision. `project` owns its validation and results in
-  `src/commands/project.ts`. `show`, `list` and `search` return finished results from
-  `src/commands/read.ts`. `brief` owns its result and rendered-size telemetry;
-  `usage` owns its report result. Bosun dispatch now returns finished results and
-  lazily loads the full-pass module only for `--full`.
+- **Command modules.** Every command entry point owns its finished `RunResult` through
+  a flags-object interface. `src/run.ts` retains parsing, help/version, identity and
+  clock context, routing and thrown-error mapping. `src/result.ts` supplies `RunResult`,
+  `result`, `ok` and `jsonLine`; command usage errors share `usageError` in `src/errors.ts`.
+  Entry writes and `init` live in `src/commands/write.ts`, with one field mapping for
+  creation and revision; projects live in `src/commands/project.ts`. Bosun lazily loads
+  its full-pass module only for `--full`. Review's enriched query is `reviewDetails`;
+  purge's command remains separate from its store operation.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).
@@ -62,4 +59,7 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 npm run build && npm test && npm run test:future && npm run typecheck
 ```
 
-The suite passes. `LEEBOARD_PERF=1 npm test` also runs the opt-in timing tests.
+Build, typecheck and all 1,612 tests pass after the command-module migration; the
+future-clock suite passes (1,610 tests, 2 skipped). The router-shape and CLI smoke
+acceptance checks also pass. `LEEBOARD_PERF=1 npm test` runs the opt-in timing tests;
+they were not rerun for this refactor.

@@ -5,17 +5,21 @@ import { briefCommand } from './commands/brief.js';
 import { bosunCommand } from './commands/bosun.js';
 import { checkCommand } from './commands/check.js';
 import { deltaCommand } from './commands/delta.js';
-import { usageCommand } from './commands/usage.js';
+import { projectCommand } from './commands/project.js';
+import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './commands/purge.js';
 import { listCommand, type ReadCtx, searchCommand, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
-import { ackCommand, addCommand, closeCommand, grantCommand, handoffCommand, holdCommand, initCommand, releaseCommand, replyCommand, requestCommand, reviseCommand, revokeCommand, supersedeCommand } from './commands/write.js';
+import { usageCommand } from './commands/usage.js';
+import {
+  ackCommand, addCommand, closeCommand, grantCommand, handoffCommand, holdCommand,
+  initCommand, releaseCommand, replyCommand, requestCommand, reviseCommand, revokeCommand,
+  supersedeCommand,
+} from './commands/write.js';
 import type { Ctx } from './context.js';
 import { EXIT, LeeboardError, usageError } from './errors.js';
 import { resolveIdentity } from './identity.js';
-import { projectCommand } from './commands/project.js';
-import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './commands/purge.js';
-import { resolveHome } from './store.js';
 import { ok, type RunResult } from './result.js';
+import { resolveHome } from './store.js';
 
 const USAGE = `Usage: lb <command> [options]
 
@@ -207,4 +211,3 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       throw usageError(`unknown command '${command}' (try --help)`);
   }
 }
-

@@ -272,14 +272,17 @@ may not run it.
 
 ## 7. CLI
 
-Internally, `check`, `review`, `delta` and `purge` command entry points own their finished
-`RunResult` (exit code, stdout and stderr). They use `<name>Command(ctx, flags)`, with
-`json` in the flags object; purge also takes ids separately and keeps a lazy context
-thunk so flag validation precedes identity resolution. `src/result.ts` supplies
-`RunResult`, `result(code, stdout)`, `ok(stdout)` and `jsonLine(data)`. `src/run.ts`
-parses options, routes these calls and maps thrown errors to exit codes. Shared
-`usageError(message)` in `src/errors.ts` constructs usage errors. Purge's command and
-help description live in `src/commands/purge.ts`; `src/purge.ts` owns the store operation.
+Internally, every command entry point in `src/commands/` owns its finished `RunResult`
+(exit code, stdout and stderr), with `json` in its flags object. `src/run.ts` retains
+option parsing, shared usage text, identity and clock context, routing, help/version,
+and thrown-error mapping. Commands that validate before resolving identity take a
+lazy context thunk. Entry writes and `init` live in `src/commands/write.ts`; creation
+and revision share one flag-to-field mapping. Bosun's command loads its full-pass
+module lazily, only for `--full`, keeping runner code off the brief/delta/check hot path.
+`src/result.ts` supplies `RunResult`, `result(code, stdout)`, `ok(stdout)` and
+`jsonLine(data)`. Shared `usageError(message)` in `src/errors.ts` constructs usage
+errors. Purge's command and help description live in `src/commands/purge.ts`;
+`src/purge.ts` owns the store operation.
 `reviewDetails` returns successor-enriched data; brief's digest keeps using lightweight `review()`.
 Delta only builds a successor index when included superseded items need it.
 
