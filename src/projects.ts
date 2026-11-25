@@ -7,7 +7,6 @@ import { PROJECT_NAME, writeFileAtomic } from './store.js';
 
 export interface Project {
   name: string;
-  aliases: string[];
   paths: string[];
   remotes: string[];
 }
@@ -20,7 +19,7 @@ function readProject(file: string): Project | null {
   try {
     const { data } = parseFrontmatter(readFileSync(file, 'utf8'));
     const list = (value: unknown) => (Array.isArray(value) ? value.map(String) : []);
-    return { name: String(data.name), aliases: list(data.aliases), paths: list(data.paths), remotes: list(data.remotes) };
+    return { name: String(data.name), paths: list(data.paths), remotes: list(data.remotes) };
   } catch {
     return null;
   }
@@ -28,17 +27,16 @@ function readProject(file: string): Project | null {
 
 const union = (a: string[], b: string[] = []) => [...new Set([...a, ...b])];
 
-/** Register a project, or add paths/aliases/remotes to an existing one. */
+/** Register a project, or add paths/remotes to an existing one. */
 export function addProject(
   home: string,
-  input: { name: string; paths: string[]; aliases?: string[]; remotes?: string[] },
+  input: { name: string; paths: string[]; remotes?: string[] },
 ): Project {
   if (!PROJECT_NAME.test(input.name)) throw new LeeboardError(`invalid project name '${input.name}'`, EXIT.USAGE);
   if (input.paths.length === 0) throw new LeeboardError('a project needs at least one --path', EXIT.USAGE);
   const existing = readProject(projectFile(home, input.name));
   const project: Project = {
     name: input.name,
-    aliases: union(existing?.aliases ?? [], input.aliases),
     paths: union(existing?.paths ?? [], input.paths.map((p) => resolve(p))),
     remotes: union(existing?.remotes ?? [], input.remotes),
   };

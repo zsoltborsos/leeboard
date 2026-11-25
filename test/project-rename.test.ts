@@ -15,7 +15,7 @@ function idOf(result: LbResult): string {
 /** A store with project `old` holding an active rule and a closed request, plus a request to it from elsewhere. */
 async function storeWithProject() {
   const home = tempDir('lb-home-');
-  await lb(home, ['project', 'add', 'old', '--path', '/work/old', '--alias', 'o']);
+  await lb(home, ['project', 'add', 'old', '--path', '/work/old']);
   await lb(home, ['project', 'add', 'other', '--path', '/work/other']);
   const rule = idOf(await lb(home, ['add', 'rule', '--title', 'Keep it small', '--scope', 'project:old'], { env: me }));
   const closed = idOf(await lb(home, ['request', '--title', 'Done already', '--to', 'project:old', '--scope', 'project:old'], { env: me }));
@@ -35,7 +35,6 @@ describe('lb project rename', () => {
     expect(existsSync(join(home, 'projects', 'old'))).toBe(false);
     expect(readFileSync(join(home, 'projects', 'new', 'project.md'), 'utf8')).toBe(`---
 name: new
-aliases: [o]
 paths: [/work/new, /work/old]
 remotes: []
 ---
@@ -69,7 +68,7 @@ remotes: []
   it('without --path keeps the paths as they were', async () => {
     const { home } = await storeWithProject();
     await lb(home, ['project', 'rename', 'old', 'new'], { env: me });
-    expect((await lb(home, ['project', 'list', '--json'])).out).toContain('"name":"new","aliases":["o"],"paths":["/work/old"]');
+    expect((await lb(home, ['project', 'list', '--json'])).out).toContain('"name":"new","paths":["/work/old"]');
   });
 
   it('a later lifecycle command on a moved closed entry writes into the new project', async () => {

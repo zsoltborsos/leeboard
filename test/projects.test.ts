@@ -12,25 +12,24 @@ describe('project registry', () => {
 
   it('stores a project as projects/<name>/project.md with the fields of the plan', () => {
     const home = tempDir();
-    addProject(home, { name: 'api', paths: ['/work/api'], aliases: ['sg'], remotes: ['git@github.com:acme/api.git'] });
+    addProject(home, { name: 'api', paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] });
     expect(readFileSync(join(home, 'projects', 'api', 'project.md'), 'utf8')).toBe(`---
 name: api
-aliases: [sg]
 paths: [/work/api]
 remotes: [git@github.com:acme/api.git]
 ---
 `);
     expect(listProjects(home)).toEqual([
-      { name: 'api', aliases: ['sg'], paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] },
+      { name: 'api', paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] },
     ]);
   });
 
-  it('adding to an existing project merges paths, aliases and remotes without duplicates', () => {
+  it('adding to an existing project merges paths and remotes without duplicates', () => {
     const home = tempDir();
-    addProject(home, { name: 'api', paths: ['/work/api'], aliases: ['sg'] });
+    addProject(home, { name: 'api', paths: ['/work/api'] });
     addProject(home, { name: 'api', paths: ['/work/api', '/other/clone'], remotes: ['https://x.test/a/b'] });
     expect(listProjects(home)).toEqual([
-      { name: 'api', aliases: ['sg'], paths: ['/work/api', '/other/clone'], remotes: ['https://x.test/a/b'] },
+      { name: 'api', paths: ['/work/api', '/other/clone'], remotes: ['https://x.test/a/b'] },
     ]);
   });
 

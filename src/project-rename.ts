@@ -40,7 +40,6 @@ export function renameProject(ctx: Ctx, from: string, to: string, path?: string)
     const renamed = addProject(ctx.home, {
       name: to,
       paths: path === undefined ? old.paths : [resolve(path), ...old.paths],
-      aliases: old.aliases,
       remotes: old.remotes,
     });
     const oldDir = join(ctx.home, 'projects', from);

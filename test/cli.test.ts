@@ -130,6 +130,7 @@ describe('exit codes and errors', () => {
     const result = await lb(tempDir('lb-home-'), ['--help']);
     expect(result.code).toBe(0);
     expect(result.out).toContain('lb brief');
+    expect(result.out).not.toContain('--alias');
     expect(result.out).toContain('[--session <id>]');
     expect(result.out).toContain('[--harness <name>]');
     expect(result.out).toContain('6 not permitted');
@@ -188,11 +189,20 @@ describe('commands', () => {
 
   it('project add and list, with --json', async () => {
     const home = tempDir('lb-home-');
-    expect((await lb(home, ['project', 'add', 'api', '--path', '/work/api', '--alias', 'sg', '--remote', 'git@github.com:acme/api.git'])).code).toBe(0);
+    expect((await lb(home, ['project', 'add', 'api', '--path', '/work/api', '--remote', 'git@github.com:acme/api.git'])).code).toBe(0);
     expect(JSON.parse((await lb(home, ['project', 'list', '--json'])).out)).toEqual([
-      { name: 'api', aliases: ['sg'], paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] },
+      { name: 'api', paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] },
     ]);
-    expect((await lb(home, ['project', 'list'])).out).toContain('api');
+    expect((await lb(home, ['project', 'list'])).out).toBe('- api — paths: /work/api — remotes: git@github.com:acme/api.git\n');
+  });
+
+  it('rejects --alias as an unknown option without registering a project', async () => {
+    const home = tempDir('lb-home-');
+    const result = await lb(home, ['project', 'add', 'demo', '--path', '/work/demo', '--alias', 'd']);
+    expect(result.code).toBe(1);
+    expect(result.out).toBe('');
+    expect(result.err).toMatch(/^lb: Unknown option '--alias'/);
+    expect(JSON.parse((await lb(home, ['project', 'list', '--json'])).out)).toEqual([]);
   });
 
   it('--json gives structured output for add, show, brief, delta and check', async () => {
