@@ -3,7 +3,7 @@ import { assertNoCredentials } from './credentials.js';
 import { type Entry, isActive, isValidTarget, KINDS, type Kind, makeId, type RevisionBefore, type Status, timestamp } from './entry.js';
 import { EXIT, LeeboardError } from './errors.js';
 import { type LogEvent, type LogLine, logChange } from './log.js';
-import { requirePermission } from './policy.js';
+import { type EntryAction, requirePermission } from './policy.js';
 import { resolveProject } from './projects.js';
 import { appendRevision, createEntryFile, findEntry, scopeDir, withRevisionLock, writeEntry } from './store.js';
 
@@ -12,7 +12,7 @@ import { appendRevision, createEntryFile, findEntry, scopeDir, withRevisionLock,
 // module decides whether it applies, whether the caller may make it, and rejects
 // credential-like text before writing atomically and logging.
 
-type Action = 'create' | 'release' | 'ack' | 'close' | 'reply' | 'revoke' | 'supersede' | 'revise' | 'expire';
+type Action = EntryAction | 'expire';
 type Heading = 'Released' | 'Reply' | 'Revoked' | 'Expired';
 
 /**

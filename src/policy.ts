@@ -3,22 +3,27 @@ import { EXIT, LeeboardError } from './errors.js';
 
 export type PolicyEntry = Pick<Entry, 'id' | 'kind' | 'author'>;
 
+export type EntryAction = 'create' | 'release' | 'ack' | 'close' | 'reply' | 'revoke' | 'supersede' | 'revise';
+
 export type PolicyAction =
-  | {
-      action: 'create' | 'release' | 'ack' | 'close' | 'reply' | 'revoke' | 'supersede' | 'revise' | 'expire';
-      entry: PolicyEntry;
-    }
+  | { action: EntryAction; entry: PolicyEntry }
   | { action: 'purge' | 'project-remove' | 'project-rename' };
 
-const NO_STORE_CHANGES: readonly Harness[] = ['bosun', 'helmraiser'];
+const OWNER_ONLY_HARNESS_DENY: readonly Harness[] = ['bosun', 'helmraiser'];
+const UNATTENDED_RUNNERS: readonly Harness[] = ['helmraiser'];
 const OWNER_REVIEW: readonly Harness[] = ['claude-code', 'pi', 'funkyoctopus', 'user'];
 
-/** Decide actor permissions only; callers still validate applicability and perform changes. */
+/**
+ * Helmraiser may not create or touch holds or grants, and may only revoke, supersede or
+ * revise entries written by its own non-null session. Bosun may not revoke user-stated
+ * entries. Bosun and Helmraiser may not purge entries, remove projects or rename projects.
+ * Callers still validate applicability and perform changes.
+ */
 export function requirePermission(identity: Author, request: PolicyAction): void {
   if (!('entry' in request)) {
     const { action } = request;
     const harness = identity.harness;
-    if (harness !== null && NO_STORE_CHANGES.includes(harness)) {
+    if (harness !== null && OWNER_ONLY_HARNESS_DENY.includes(harness)) {
       const operation = { purge: 'purge entries', 'project-remove': 'remove projects', 'project-rename': 'rename projects' }[action];
       throw new LeeboardError(`${harness} may not ${operation}; ask the owner or an interactive session`, EXIT.NOT_PERMITTED);
     }
@@ -27,7 +32,7 @@ export function requirePermission(identity: Author, request: PolicyAction): void
 
   const { action, entry } = request;
   const protectedKind = entry.kind === 'hold' || entry.kind === 'grant';
-  const unattendedRunner = identity.harness === 'helmraiser';
+  const unattendedRunner = identity.harness !== null && UNATTENDED_RUNNERS.includes(identity.harness);
   if (action === 'create') {
     // Holds and grants gate and authorise work, so an unattended worker never places them.
     if (unattendedRunner && protectedKind) {
