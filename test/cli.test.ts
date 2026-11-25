@@ -192,14 +192,35 @@ describe('exit codes and errors', () => {
 describe('commands', () => {
   it('init creates the layout in LEEBOARD_HOME and nothing under the real home', async () => {
     const home = join(tempDir('lb-parent-'), 'store');
-    expect((await lb(home, ['init'])).code).toBe(0);
+    expect(await lb(home, ['init'])).toEqual({ code: 0, out: `initialised ${home}\n`, err: '' });
     expect(readdirSync(home).sort()).toEqual(['.gitignore', 'global', 'log.jsonl', 'machine', 'projects', 'state']);
     expect(existsSync(join(process.env.HOME!, '.leeboard'))).toBe(false);
   });
 
   it('init --json reports the store it initialised', async () => {
     const home = join(tempDir('lb-parent-'), 'store');
-    expect(JSON.parse((await lb(home, ['init', '--json'])).out)).toEqual({ home });
+    expect(await lb(home, ['init', '--json'])).toEqual({ code: 0, out: JSON.stringify({ home }) + '\n', err: '' });
+  });
+
+  it.each([[], ['--harness', 'invalid']])('requires add kind before resolving identity: %j', async (...flags) => {
+    expect(await lb(tempDir(), ['add', ...flags])).toEqual({ code: 1, out: '', err: 'lb: usage: lb add <kind>\n' });
+  });
+
+  it.each([
+    ['hold', ['--release', 'Owner approves', '--blocks', ' push, ,merge '], { release: 'Owner approves', blocks: ['push', 'merge'] }],
+    ['grant', ['--holder', 'owner'], { holder: 'owner' }],
+    ['handoff', ['--to', 'any'], { to: 'any' }],
+    ['request', ['--to', 'any'], { to: 'any' }],
+  ] as const)('preserves %s alias fields and summary output', async (kind, flags, fields) => {
+    const home = tempDir();
+    const added = await lb(home, [kind, '--title', 'Alias', ...flags, '--json']);
+    expect(added).toMatchObject({ code: 0, err: '' });
+    const summary = JSON.parse(added.out);
+    expect(summary).toMatchObject({ kind, title: 'Alias', scope: 'global', status: 'active', ...fields });
+    expect(added.out).toBe(JSON.stringify(summary) + '\n');
+    expect(JSON.parse((await lb(home, ['show', summary.id, '--json'])).out)).toMatchObject(fields);
+    const text = await lb(home, [kind, '--title', 'Text alias', ...flags]);
+    expect(text).toEqual({ code: 0, out: `- [${idOf(text)}] active global: Text alias\n`, err: '' });
   });
 
   it('writes to the project that resolves, and --scope overrides', async () => {

@@ -8,7 +8,8 @@ import { deltaCommand } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
-import { ackHandoff, closeRequest, createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
+import { ackHandoff, closeRequest, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
+import { addCommand, grantCommand, handoffCommand, holdCommand, initCommand, requestCommand } from './commands/write.js';
 import type { Ctx } from './context.js';
 import { type Entry, summarize } from './entry.js';
 import { EXIT, LeeboardError, usageError } from './errors.js';
@@ -17,7 +18,7 @@ import { removeProject } from './project-remove.js';
 import { renameProject } from './project-rename.js';
 import { addProject, listProjects, type Project } from './projects.js';
 import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './commands/purge.js';
-import { initStore, resolveHome } from './store.js';
+import { resolveHome } from './store.js';
 import { jsonLine, ok, type RunResult } from './result.js';
 
 const USAGE = `Usage: lb <command> [options]
@@ -138,32 +139,20 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
   });
   const arg = (index: number, name: string): string => args[index] ?? fail(`usage: lb ${command} <${name}>`);
   const showEntrySummary = (entry: Entry): RunResult => ok(values.json ? jsonLine(summarize(entry)) : renderList([summarize(entry)]));
-  const newEntry = (kind: string): RunResult =>
-    showEntrySummary(
-      createEntry(ctx(), {
-        kind,
-        title: values.title ?? '',
-        body: readBody(values.body),
-        scope: values.scope,
-        until: values.until,
-        release: values.release,
-        blocks: values.blocks?.split(',').map((tag) => tag.trim()).filter(Boolean),
-        holder: values.holder,
-        to: values.to,
-      }),
-    );
 
   switch (command) {
     case 'init':
-      initStore(home);
-      return ok(values.json ? jsonLine({ home }) : `initialised ${home}\n`);
+      return initCommand(home, values);
     case 'add':
-      return newEntry(arg(0, 'kind'));
+      return addCommand(ctx, args[0], values);
     case 'hold':
+      return holdCommand(ctx, values);
     case 'grant':
+      return grantCommand(ctx, values);
     case 'handoff':
+      return handoffCommand(ctx, values);
     case 'request':
-      return newEntry(command);
+      return requestCommand(ctx, values);
 
     case 'revise': {
       const id = arg(0, 'id');
