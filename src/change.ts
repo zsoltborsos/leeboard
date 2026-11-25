@@ -1,8 +1,9 @@
 import type { Ctx } from './context.js';
 import { assertNoCredentials } from './credentials.js';
-import { type Entry, type Harness, isActive, isValidTarget, KINDS, type Kind, makeId, type RevisionBefore, type Status, timestamp } from './entry.js';
+import { type Entry, isActive, isValidTarget, KINDS, type Kind, makeId, type RevisionBefore, type Status, timestamp } from './entry.js';
 import { EXIT, LeeboardError } from './errors.js';
 import { type LogEvent, type LogLine, logChange } from './log.js';
+import { requirePermission } from './policy.js';
 import { resolveProject } from './projects.js';
 import { appendRevision, createEntryFile, findEntry, scopeDir, withRevisionLock, writeEntry } from './store.js';
 
@@ -44,45 +45,6 @@ export interface NewEntry {
 }
 
 export type RevisionInput = Partial<Omit<NewEntry, 'kind'>>;
-
-/** The unattended task runners, which share one set of restrictions. */
-const UNATTENDED_RUNNERS: readonly Harness[] = ['helmraiser'];
-
-/**
- * Unattended runner workers (Helmraiser) may not create or touch holds or grants,
- * and may only revoke or supersede or revise entries they authored. Bosun may not revoke the
- * owner's words (it may supersede or revise them). Other harnesses and other changes are
- * unrestricted.
- */
-function requirePermission(ctx: Ctx, action: Action, entry: Pick<Entry, 'id' | 'kind' | 'author'>): void {
-  const protectedKind = entry.kind === 'hold' || entry.kind === 'grant';
-  const unattendedRunner = ctx.identity.harness !== null && UNATTENDED_RUNNERS.includes(ctx.identity.harness);
-  if (action === 'create') {
-    // Holds and grants gate and authorise work, so an unattended worker never places them.
-    if (unattendedRunner && protectedKind) {
-      throw new LeeboardError(
-        `Unattended runner workers (Helmraiser) cannot create a ${entry.kind}; ask the owner or an interactive session (write a request instead)`,
-        EXIT.NOT_PERMITTED,
-      );
-    }
-    return;
-  }
-  if (ctx.identity.harness === 'bosun' && action === 'revoke' && entry.author.origin === 'user-stated') {
-    throw new LeeboardError(
-      `cannot revoke ${entry.id}: Bosun may not revoke a user-stated entry; supersede it or flag it in the report`,
-      EXIT.NOT_PERMITTED,
-    );
-  }
-  if (!unattendedRunner || !(action === 'release' || action === 'revoke' || action === 'supersede' || action === 'revise')) return;
-
-  const ownsEntry = ctx.identity.session !== null && entry.author.session === ctx.identity.session;
-  if (protectedKind || (action !== 'release' && !ownsEntry)) {
-    throw new LeeboardError(
-      `cannot ${action} ${entry.id}: unattended runner workers (Helmraiser) are not permitted; ask the owner or use an interactive session`,
-      EXIT.NOT_PERMITTED,
-    );
-  }
-}
 
 /** Exit 5 unless the entry is active and one of the kinds the change applies to. */
 function requireApplies(entry: Entry, action: Exclude<Action, 'create'>): void {
@@ -195,7 +157,7 @@ export function createEntry(ctx: Ctx, input: NewEntry): Entry {
     throw usage(`unknown kind '${input.kind}' (use ${KINDS.join(', ')})`);
   }
   const kind = input.kind as Kind;
-  requirePermission(ctx, 'create', { id: '', kind, author: ctx.identity });
+  requirePermission(ctx.identity, { action: 'create', entry: { id: '', kind, author: ctx.identity } });
   const normalized = normalizeFields(input);
   const title = normalized.title!;
   const body = normalized.body ?? '';
@@ -239,7 +201,7 @@ export function reviseEntry(ctx: Ctx, idPrefix: string, input: RevisionInput): E
   if (!Object.values(input).some((value) => value !== undefined)) throw usage('revise needs at least one mutable field');
   return withRevisionLock(ctx.home, () => {
     const entry = findEntry(ctx.home, idPrefix);
-    requirePermission(ctx, 'revise', entry);
+    requirePermission(ctx.identity, { action: 'revise', entry });
     requireApplies(entry, 'revise');
     const candidate: Entry = { ...entry, ...normalizeFields(input) };
     validateFields(ctx.home, candidate);
@@ -272,7 +234,7 @@ function defaultScope(ctx: Ctx): string {
 function transition(ctx: Ctx, idPrefix: string, action: 'release' | 'ack' | 'close' | 'reply' | 'revoke', text?: string): Entry {
   return withRevisionLock(ctx.home, () => {
     const entry = findEntry(ctx.home, idPrefix);
-    requirePermission(ctx, action, entry);
+    requirePermission(ctx.identity, { action, entry });
     requireApplies(entry, action);
     return apply(ctx, entry, action, text);
   });
@@ -312,7 +274,7 @@ export function revokeEntry(ctx: Ctx, idPrefix: string, reason: string): Entry {
 export function supersedeEntry(ctx: Ctx, oldIdPrefix: string, newIdPrefix: string): Entry {
   return withRevisionLock(ctx.home, () => {
     const old = findEntry(ctx.home, oldIdPrefix);
-    requirePermission(ctx, 'supersede', old);
+    requirePermission(ctx.identity, { action: 'supersede', entry: old });
     const replacement = findEntry(ctx.home, newIdPrefix);
     if (old.id === replacement.id) {
       throw new LeeboardError(`cannot supersede ${old.id} by itself`, EXIT.BAD_TRANSITION);
