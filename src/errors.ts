@@ -17,3 +17,5 @@ export class LeeboardError extends Error {
     this.name = 'LeeboardError';
   }
 }
+
+export const usageError = (message: string): LeeboardError => new LeeboardError(message, EXIT.USAGE);

@@ -11,12 +11,12 @@ import { reviewCommand } from './commands/review.js';
 import { ackHandoff, closeRequest, createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
 import type { Ctx } from './context.js';
 import { type Entry, summarize } from './entry.js';
-import { EXIT, LeeboardError } from './errors.js';
+import { EXIT, LeeboardError, usageError } from './errors.js';
 import { resolveIdentity } from './identity.js';
 import { removeProject } from './project-remove.js';
 import { renameProject } from './project-rename.js';
 import { addProject, listProjects, type Project } from './projects.js';
-import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './purge.js';
+import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './commands/purge.js';
 import { initStore, resolveHome } from './store.js';
 import { jsonLine, ok, type RunResult } from './result.js';
 
@@ -108,8 +108,6 @@ const OPTIONS = {
   remote: { type: 'string', multiple: true },
 } as const;
 
-const usage = (message: string): LeeboardError => new LeeboardError(message, EXIT.USAGE);
-
 export async function run(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<RunResult> {
   try {
     return await dispatch(argv, env, cwd);
@@ -129,7 +127,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     return ok(`${version}\n`);
   }
   const [command, ...args] = positionals;
-  if (!command) throw usage('no command given (try --help)');
+  if (!command) throw usageError('no command given (try --help)');
 
   const home = resolveHome(env);
   const readCtx: ReadCtx = { home, now: new Date() };
@@ -170,7 +168,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     case 'revise': {
       const id = arg(0, 'id');
       for (const flag of ['kind', 'origin', 'status'] as const) {
-        if (values[flag] !== undefined) throw usage(`--${flag} cannot be changed by revise`);
+        if (values[flag] !== undefined) throw usageError(`--${flag} cannot be changed by revise`);
       }
       return showEntrySummary(reviseEntry(ctx(), id, {
         title: values.title,
@@ -239,7 +237,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     }
     case 'bosun': {
       if (values.full) {
-        if (values['dry-run'] || values.quick) throw usage('bosun --full does not combine with --quick or --dry-run');
+        if (values['dry-run'] || values.quick) throw usageError('bosun --full does not combine with --quick or --dry-run');
         // Loaded only here, so brief, delta and check never pay for the runner code.
         const { bosunFullCommand } = await import('./commands/bosun-full.js');
         return bosunFullCommand(
@@ -262,7 +260,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     case 'project':
       return project(home, args, values, ctx);
     default:
-      throw usage(`unknown command '${command}' (try --help)`);
+      throw usageError(`unknown command '${command}' (try --help)`);
   }
 }
 
@@ -302,12 +300,12 @@ function project(
       return ok(values.json ? jsonLine(projects) : projects.map(describe).join(''));
     }
     default:
-      throw usage('usage: lb project add|rename|remove|list');
+      throw usageError('usage: lb project add|rename|remove|list');
   }
 }
 
 function fail(message: string): never {
-  throw usage(message);
+  throw usageError(message);
 }
 
 /** `--body -` reads the body from stdin. */

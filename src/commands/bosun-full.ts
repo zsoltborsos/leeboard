@@ -7,7 +7,7 @@ import { type AgentExit, buildInvocation, NEEDS_MODEL, parseStream, type Runner,
 import { readSection } from '../change.js';
 import type { Ctx } from '../context.js';
 import { timestamp } from '../entry.js';
-import { EXIT, LeeboardError } from '../errors.js';
+import { usageError } from '../errors.js';
 import { logSize, readLogSince } from '../log.js';
 import { jsonLine, ok, type RunResult } from '../result.js';
 import { listEntries, writeFileAtomic } from '../store.js';
@@ -62,7 +62,6 @@ export interface FullResult {
   run: RunRecord;
 }
 
-const usage = (message: string): LeeboardError => new LeeboardError(message, EXIT.USAGE);
 const DEFAULT_MEMORY_ROOT = (): string => join(homedir(), '.claude', 'projects');
 
 /** Where the last clean full pass left the change log, so an idle day can skip the agent. */
@@ -89,7 +88,7 @@ export function fullPassNeeded(home: string, memoryRoot?: string): { needed: boo
 }
 
 function checkTimeout(minutes: number): void {
-  if (!(Number.isFinite(minutes) && minutes > 0)) throw usage('--timeout must be a positive number of minutes');
+  if (!(Number.isFinite(minutes) && minutes > 0)) throw usageError('--timeout must be a positive number of minutes');
 }
 
 /** What `lb bosun --full` was given, as parsed from the command line and not yet checked. */
@@ -168,7 +167,7 @@ export async function bosunFull(ctx: Ctx, options: FullOptions): Promise<FullRes
   try {
     mkdirSync(dir);
   } catch {
-    throw usage(`run ${runId} already exists; wait a second and retry`);
+    throw usageError(`run ${runId} already exists; wait a second and retry`);
   }
 
   const logStart = logSize(ctx.home);
@@ -235,7 +234,7 @@ export async function bosunFull(ctx: Ctx, options: FullOptions): Promise<FullRes
 }
 
 function fail(message: string): never {
-  throw usage(message);
+  throw usageError(message);
 }
 
 function countChanges(home: string, offset: number, session: string): Changes {

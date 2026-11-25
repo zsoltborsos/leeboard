@@ -5,7 +5,7 @@ import { createEntry } from '../src/change.js';
 import type { Ctx } from '../src/context.js';
 import { summarize } from '../src/entry.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
-import { purgeCommand, type PurgeFlags } from '../src/purge.js';
+import { purgeCommand, type PurgeFlags } from '../src/commands/purge.js';
 import { initStore, scopeDir, writeEntry } from '../src/store.js';
 import { lb, sampleEntry, tempDir } from './helpers.js';
 

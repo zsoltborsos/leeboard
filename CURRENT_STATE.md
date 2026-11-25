@@ -20,7 +20,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 - **Command modules.** `check`, `review`, `delta` and `purge` own their finished command
   results through flags-object interfaces; `src/result.ts` supplies `RunResult`,
   `result`, `ok` and `jsonLine`. Review's enriched query is `reviewDetails`.
-  Remaining commands follow.
+  Purge's command lives in `src/commands/purge.ts`, separate from its store operation;
+  command usage errors use `usageError` in `src/errors.ts`. Remaining commands follow.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).

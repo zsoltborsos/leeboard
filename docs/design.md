@@ -277,8 +277,10 @@ Internally, `check`, `review`, `delta` and `purge` command entry points own thei
 `json` in the flags object; purge also takes ids separately and keeps a lazy context
 thunk so flag validation precedes identity resolution. `src/result.ts` supplies
 `RunResult`, `result(code, stdout)`, `ok(stdout)` and `jsonLine(data)`. `src/run.ts`
-parses options, routes these calls and maps thrown errors to exit codes. `reviewDetails`
-returns successor-enriched data; brief's digest keeps using lightweight `review()`.
+parses options, routes these calls and maps thrown errors to exit codes. Shared
+`usageError(message)` in `src/errors.ts` constructs usage errors. Purge's command and
+help description live in `src/commands/purge.ts`; `src/purge.ts` owns the store operation.
+`reviewDetails` returns successor-enriched data; brief's digest keeps using lightweight `review()`.
 Delta only builds a successor index when included superseded items need it.
 
 Every command accepts `--json`. Identity comes from flags or environment:

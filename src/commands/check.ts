@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import type { Ctx } from '../context.js';
 import { isActive, kindOfId, newestFirst, summarize, type Summary } from '../entry.js';
-import { EXIT, LeeboardError } from '../errors.js';
+import { EXIT, usageError } from '../errors.js';
 import { describeHold } from '../format.js';
 import { jsonLine, result, type RunResult } from '../result.js';
 import { viewFor } from '../scope.js';
@@ -18,7 +18,7 @@ export interface CheckData {
 
 /** Which holds block `tag` here. Reads only: it records nothing. */
 export function check(ctx: Ctx, tag: string): CheckData {
-  if (tag.trim() === '') throw new LeeboardError('--blocks <tag> is required', EXIT.USAGE);
+  if (tag.trim() === '') throw usageError('--blocks <tag> is required');
   const view = viewFor(ctx);
   const { entries, unreadable } = listEntriesWithDiagnostics(ctx.home, view.scopes, (id) => kindOfId(id) === 'hold');
   const holds = entries

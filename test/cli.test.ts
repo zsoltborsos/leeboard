@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import { CLI, lb, type LbResult, makeRepo, requireBuild, sampleEntry, tempDir } from './helpers.js';
 import { initStore, scopeDir, writeEntry } from '../src/store.js';
+import { EXIT, LeeboardError, usageError } from '../src/errors.js';
 import { perfExclude } from '../vitest.config.js';
 
 const sessionA = { LEEBOARD_SESSION: 'A', LEEBOARD_HARNESS: 'claude-code' };
@@ -136,6 +137,14 @@ describe('exit codes and errors', () => {
     expect((await lb(home, ['ack', rule])).code).toBe(5);
     expect((await lb(home, ['revoke', rule, '--reason', 'obsolete'])).code).toBe(0);
     expect((await lb(home, ['revoke', rule, '--reason', 'again'])).code).toBe(5);
+  });
+
+  it('constructs usage errors with the original message and CLI exit code', () => {
+    const error = usageError('--days goes with --closed');
+    expect(error).toBeInstanceOf(LeeboardError);
+    expect(error.name).toBe('LeeboardError');
+    expect(error.message).toBe('--days goes with --closed');
+    expect(error.exitCode).toBe(EXIT.USAGE);
   });
 
   it('1 for usage mistakes: missing title, unknown command or flag, a hold without --release', async () => {
