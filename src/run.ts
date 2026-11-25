@@ -204,11 +204,11 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       return showEntrySummary(supersedeEntry(ctx(), arg(0, 'old-id'), values.by ?? fail('usage: lb supersede <old-id> --by <new-id>')));
 
     case 'show': {
-      const { data, text } = showCommand(home, arg(0, 'id'));
+      const { data, text } = showCommand(ctx(), arg(0, 'id'));
       return ok(values.json ? json(data) : text);
     }
     case 'list': {
-      const items = listCommand(home, {
+      const items = listCommand(ctx(), {
         kind: values.kind,
         scope: values.scope,
         status: values.status,
@@ -219,7 +219,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       return ok(values.json ? json(items) : renderList(items));
     }
     case 'search': {
-      const items = searchEntries(home, args.join(' '), { all: values.all });
+      const items = searchEntries(ctx(), args.join(' '), { all: values.all });
       return ok(values.json ? json(items) : renderList(items));
     }
     case 'purge': {

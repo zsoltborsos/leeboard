@@ -1,4 +1,5 @@
 import { displayStatus, type DisplayStatus, type Entry, KINDS, newestFirst, serializeEntry, STATUSES, summarize, type Summary } from '../entry.js';
+import type { Ctx } from '../context.js';
 import { EXIT, LeeboardError } from '../errors.js';
 import { createSuccessorResolver, findEntry, listEntries, scopeDir, type SuccessorResolution } from '../store.js';
 
@@ -9,12 +10,12 @@ export function showEntry(home: string, idPrefix: string): Entry {
   return findEntry(home, idPrefix);
 }
 
-export function showCommand(home: string, idPrefix: string): {
+export function showCommand({ home, now }: Pick<Ctx, 'home' | 'now'>, idPrefix: string): {
   data: ReadEntry & { supersededBy?: string[]; current?: string | null; chainEnd?: SuccessorResolution['chainEnd'] };
   text: string;
 } {
   const entry = showEntry(home, idPrefix);
-  const status = displayStatus(entry, new Date());
+  const status = displayStatus(entry, now);
   let text = serializeEntry({ ...entry, status } as Entry);
   if (entry.status !== 'superseded') return { data: { ...entry, status }, text };
 
@@ -42,7 +43,7 @@ function usage(message: string): LeeboardError {
  * author (--session, --harness): "what did this run write" wants every status.
  */
 export function listCommand(
-  home: string,
+  { home, now }: Pick<Ctx, 'home' | 'now'>,
   filter: { kind?: string; scope?: string; status?: string; session?: string; harness?: string; all?: boolean },
 ): ReadSummary[] {
   if (filter.kind !== undefined && !(KINDS as readonly string[]).includes(filter.kind)) {
@@ -53,7 +54,6 @@ export function listCommand(
   }
   if (filter.scope !== undefined) scopeDir(home, filter.scope); // validates the scope
   if (filter.all && filter.status !== undefined) throw usage('--all does not combine with --status');
-  const now = new Date();
   const byAuthor = filter.session !== undefined || filter.harness !== undefined;
   const status = filter.status ?? (filter.all || byAuthor ? undefined : 'active');
   return listEntries(home, filter.scope === undefined ? undefined : [filter.scope])
@@ -73,8 +73,7 @@ export function renderList(items: ReadSummary[]): string {
 }
 
 /** Case-insensitive substring match over title and body, across all scopes; active entries unless `all`. */
-export function searchEntries(home: string, text: string, options: { all?: boolean } = {}): ReadSummary[] {
-  const now = new Date();
+export function searchEntries({ home, now }: Pick<Ctx, 'home' | 'now'>, text: string, options: { all?: boolean } = {}): ReadSummary[] {
   const needle = text.trim().toLowerCase();
   if (needle === '') throw usage('nothing to search for');
   return listEntries(home)
