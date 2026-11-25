@@ -3,18 +3,21 @@ import { EXIT, LeeboardError } from '../errors.js';
 import { createSuccessorResolver, findEntry, listEntries, scopeDir, type SuccessorResolution } from '../store.js';
 
 type ReadSummary = Omit<Summary, 'status'> & { status: DisplayStatus };
+type ReadEntry = Omit<Entry, 'status'> & { status: DisplayStatus };
 
 export function showEntry(home: string, idPrefix: string): Entry {
   return findEntry(home, idPrefix);
 }
 
 export function showCommand(home: string, idPrefix: string): {
-  data: Entry & { supersededBy?: string[]; current?: string | null; chainEnd?: SuccessorResolution['chainEnd'] };
+  data: ReadEntry & { supersededBy?: string[]; current?: string | null; chainEnd?: SuccessorResolution['chainEnd'] };
   text: string;
 } {
   const entry = showEntry(home, idPrefix);
+  const status = displayStatus(entry, new Date());
   let text = serializeEntry(entry);
-  if (entry.status !== 'superseded') return { data: entry, text };
+  if (status === 'lapsed') text = text.replace(/^status: active$/m, 'status: lapsed');
+  if (entry.status !== 'superseded') return { data: { ...entry, status }, text };
 
   const { successors, current, chainEnd } = createSuccessorResolver(listEntries(home))(entry.id);
   const lines = successors.map((next) => `Superseded by: ${next.id} — ${next.title}\n`);

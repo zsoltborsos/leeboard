@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { listCommand, renderList, searchEntries, showEntry } from '../src/commands/read.js';
-import { serializeEntry } from '../src/entry.js';
+import { parseEntry, serializeEntry } from '../src/entry.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
 import { scopeDir, writeEntry } from '../src/store.js';
 import { lb, sampleEntry, tempDir } from './helpers.js';
@@ -241,6 +241,45 @@ describe('lapsed reads', () => {
     expect(listCommand(home, { session: 'A', status: 'active' }).map((e) => e.id)).toEqual(active);
     expect(renderList(listCommand(home, { all: true }))).toContain('lapsed global: Sample');
     expect(failure(() => listCommand(home, { all: true, status: 'lapsed' })).exitCode).toBe(EXIT.USAGE);
+  });
+
+  it('reports lapsed through the CLI without changing the entry or log', async () => {
+    const home = tempDir();
+    expect((await lb(home, ['init'])).code).toBe(0);
+    const entry = sampleEntry({ until: '2000-01-01', body: 'Body\nstatus: active\n' });
+    writeEntry(home, entry);
+    const path = join(scopeDir(home, entry.scope), `${entry.id}.md`);
+    const bytes = readFileSync(path);
+    const logPath = join(home, 'log.jsonl');
+    const log = readFileSync(logPath);
+    for (const args of [
+      ['list', '--json'], ['list', '--status', 'active', '--json'], ['search', 'sample', '--json'],
+    ]) {
+      expect(await lb(home, args)).toEqual({ code: 0, err: '', out: '[]\n' });
+    }
+    for (const args of [
+      ['list', '--all', '--json'], ['list', '--status', 'lapsed', '--json'], ['search', 'sample', '--all', '--json'],
+    ]) {
+      const result = await lb(home, args);
+      expect(result.code).toBe(0);
+      expect(result.err).toBe('');
+      expect(JSON.parse(result.out)).toEqual(listCommand(home, { status: 'lapsed' }));
+    }
+    for (const args of [['list', '--all'], ['search', 'sample', '--all']]) {
+      expect(await lb(home, args)).toEqual({ code: 0, err: '', out: renderList(listCommand(home, { all: true })) });
+    }
+    expect(await lb(home, ['show', entry.id])).toEqual({
+      code: 0, err: '', out: serializeEntry(entry).replace(/^status: active$/m, 'status: lapsed'),
+    });
+    const json = await lb(home, ['show', entry.id, '--json']);
+    expect(json.code).toBe(0);
+    expect(JSON.parse(json.out)).toEqual({ ...entry, status: 'lapsed' });
+    expect(readFileSync(path)).toEqual(bytes);
+    expect(readFileSync(path, 'utf8')).toMatch(/^status: active$/m);
+    expect(readFileSync(logPath)).toEqual(log);
+    expect(showEntry(home, entry.id).status).toBe('active');
+    expect(() => parseEntry(serializeEntry(entry).replace(/^status: active$/m, 'status: lapsed'))).toThrow();
+    expect((await lb(home, ['revise', entry.id, '--status', 'lapsed'])).code).toBe(EXIT.USAGE);
   });
 
   it.each([
