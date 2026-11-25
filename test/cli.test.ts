@@ -265,6 +265,40 @@ describe('commands', () => {
     expect((await lb(home, ['project', 'list'])).out).toBe('- api — paths: /work/api — remotes: git@github.com:acme/api.git\n');
   });
 
+  it.each([false, true])('preserves project rename, path drop and removal results (json=%s)', async (json) => {
+    const home = tempDir();
+    await lb(home, ['project', 'add', 'old', '--path', '/work/one', '--path', '/work/two']);
+    const flags = json ? ['--json'] : [];
+    const renamed = { name: 'new', paths: ['/work/one', '/work/two'], remotes: [] };
+    expect(await lb(home, ['project', 'rename', 'old', 'new', ...flags])).toEqual({
+      code: 0, out: json ? JSON.stringify(renamed) + '\n' : '- new — paths: /work/one, /work/two\n', err: '',
+    });
+    expect(await lb(home, ['project', 'remove', 'new', '--path', '/work/one', ...flags])).toEqual({
+      code: 0, out: json ? JSON.stringify({ project: { ...renamed, paths: ['/work/two'] }, droppedPaths: ['/work/one'] }) + '\n' : 'dropped 1 path(s)\n- new — paths: /work/two\n', err: '',
+    });
+    expect(await lb(home, ['project', 'remove', 'new', ...flags])).toEqual({
+      code: 0, out: json ? '{"removed":"new"}\n' : 'removed project new\n', err: '',
+    });
+  });
+
+  it.each([
+    [['add'], 'usage: lb project add <name> --path <path>'],
+    [['rename'], 'usage: lb project rename <old> <new> [--path <dir>]'],
+    [['rename', 'old'], 'usage: lb project rename <old> <new> [--path <dir>]'],
+    [['rename', 'old', 'new', '--path', '/one', '--path', '/two'], 'usage: lb project rename <old> <new> [--path <dir>]'],
+    [['remove'], 'usage: lb project remove <name> [--path <dir>]...'],
+    [['remove', 'old', 'extra'], 'usage: lb project remove <name> [--path <dir>]...'],
+    [['unknown'], 'usage: lb project add|rename|remove|list'],
+  ])('validates project arguments before identity: %j', async (args, message) => {
+    expect(await lb(tempDir(), ['project', ...args, '--harness', 'invalid'])).toEqual({ code: 1, out: '', err: `lb: ${message}\n` });
+  });
+
+  it('project add and list do not resolve identity', async () => {
+    const home = tempDir();
+    expect(await lb(home, ['project', 'add', 'demo', '--path', '/work/demo', '--harness', 'invalid'])).toEqual({ code: 0, out: '- demo — paths: /work/demo\n', err: '' });
+    expect(await lb(home, ['project', 'list', '--harness', 'invalid'])).toEqual({ code: 0, out: '- demo — paths: /work/demo\n', err: '' });
+  });
+
   it('rejects --alias as an unknown option without registering a project', async () => {
     const home = tempDir('lb-home-');
     const result = await lb(home, ['project', 'add', 'demo', '--path', '/work/demo', '--alias', 'd']);

@@ -23,7 +23,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   Purge's command lives in `src/commands/purge.ts`, separate from its store operation;
   command usage errors use `usageError` in `src/errors.ts`. Entry writes and `init` now
   return finished results from `src/commands/write.ts`, sharing one field mapping for
-  creation and revision; remaining read, project and report commands follow.
+  creation and revision. `project` owns its validation and results in
+  `src/commands/project.ts`; remaining read and report commands follow.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).
