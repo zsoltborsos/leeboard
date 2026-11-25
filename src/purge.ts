@@ -4,6 +4,7 @@ import type { Ctx } from './context.js';
 import { type Entry, entryIdsIn, summarize, type Summary } from './entry.js';
 import { EXIT, LeeboardError } from './errors.js';
 import { logChange } from './log.js';
+import { requirePermission } from './policy.js';
 import { findEntry, listEntries, scopeDir, withRevisionLock, writeEntry } from './store.js';
 
 /** How long `lb purge --closed` keeps a closed entry, counted from its last change. */
@@ -25,10 +26,7 @@ export type PurgeTarget = { ids: string[] } | { closed: true; days: number };
  * Only interactive sessions may purge: Bosun and unattended runners never delete.
  */
 export function purgeEntries(ctx: Ctx, target: PurgeTarget, options: { dryRun?: boolean } = {}): PurgeResult {
-  const harness = ctx.identity.harness;
-  if (harness === 'bosun' || harness === 'helmraiser') {
-    throw new LeeboardError(`${harness} may not purge entries; ask the owner or an interactive session`, EXIT.NOT_PERMITTED);
-  }
+  requirePermission(ctx.identity, { action: 'purge' });
   return withRevisionLock(ctx.home, () => {
     const all = listEntries(ctx.home);
     const chosen = 'ids' in target
