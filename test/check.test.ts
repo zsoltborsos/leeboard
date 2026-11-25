@@ -148,3 +148,61 @@ describe('check', () => {
     }
   });
 });
+
+describe('check command output', () => {
+  it.each([false, true])('returns exact clear output (json=%s)', async (json) => {
+    const { home, repo } = world();
+    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
+      .toEqual({ code: 0, out: json ? '[]\n' : '', err: '' });
+  });
+
+  it.each([false, true])('returns exact blocked output (json=%s)', async (json) => {
+    const { ctx, home, repo } = world();
+    const hold = createEntry(ctx, { kind: 'hold', title: 'Freeze', release: 'told', blocks: ['push'] });
+    const expected = [{
+      id: hold.id, kind: 'hold', scope: 'project:alpha', status: 'active', title: 'Freeze',
+      author: ctx.identity, created: hold.created, updated: hold.updated, release: 'told', blocks: ['push'],
+    }];
+    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
+      .toEqual({ code: 3, out: json ? JSON.stringify(expected) + '\n' : `- [${hold.id}] Freeze — release: told — blocks: push\n`, err: '' });
+  });
+
+  it.each([false, true])('returns exact unreadable-only output (json=%s)', async (json) => {
+    const { home, repo } = world();
+    const dir = scopeDir(home, 'project:alpha');
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, 'hold-broken.md');
+    writeFileSync(path, 'no frontmatter');
+    const expected = [{
+      id: 'hold-broken', kind: 'hold',
+      title: `Unreadable hold file: ${path} — could not be parsed: entry has no frontmatter`,
+      release: 'fix or remove this file', unreadable: true,
+    }];
+    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
+      .toEqual({ code: 3, out: json ? JSON.stringify(expected) + '\n' : `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`, err: '' });
+  });
+
+  it.each([false, true])('returns holds before unreadable files exactly (json=%s)', async (json) => {
+    const { ctx, home, repo } = world();
+    const hold = createEntry(ctx, { kind: 'hold', title: 'Freeze', release: 'told', blocks: ['push'] });
+    const dir = scopeDir(home, 'project:alpha');
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, 'hold-broken.md');
+    writeFileSync(path, 'no frontmatter');
+    const expected = [
+      {
+        id: hold.id, kind: 'hold', scope: 'project:alpha', status: 'active', title: 'Freeze',
+        author: ctx.identity, created: hold.created, updated: hold.updated, release: 'told', blocks: ['push'],
+      },
+      {
+        id: 'hold-broken', kind: 'hold',
+        title: `Unreadable hold file: ${path} — could not be parsed: entry has no frontmatter`,
+        release: 'fix or remove this file', unreadable: true,
+      },
+    ];
+    const text = `- [${hold.id}] Freeze — release: told — blocks: push\n` +
+      `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`;
+    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
+      .toEqual({ code: 3, out: json ? JSON.stringify(expected) + '\n' : text, err: '' });
+  });
+});
