@@ -38,6 +38,21 @@ describe('show', () => {
     expect(serializeEntry(entry)).toContain('tail returns its own status');
   });
 
+  it.each([
+    ['LEEBOARD_HARNESS', 'Helmraiser'],
+    ['LEEBOARD_SESSION', 'x'.repeat(129)],
+  ])('does not resolve caller identity for reads with environment %s', async (key, value) => {
+    const home = store();
+    const env = { [key]: value };
+    for (const args of [['show', 'rule-pipe'], ['list'], ['search', 'pipefail']]) {
+      for (const flags of [[], ['--json']]) {
+        const expected = await lb(home, [...args, ...flags]);
+        expect(expected.code).toBe(0);
+        expect(await lb(home, [...args, ...flags], { env })).toEqual(expected);
+      }
+    }
+  });
+
   it('exits 4 for an unknown id', () => {
     expect(failure(() => showEntry(store(), 'nope')).exitCode).toBe(EXIT.UNKNOWN_ID);
   });
@@ -471,6 +486,15 @@ describe('list author filters', () => {
     expect(listCommand(context(home), { session: 'run-2' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'rule-run-old-0005']);
     expect(listCommand(context(home), { harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001', 'rule-run-old-0005']);
     expect(listCommand(context(home), { session: 'run-2', status: 'active' }).map((e) => e.id)).toEqual(['rule-run-b-0002']);
+  });
+
+  it('treats CLI author filters as exact data filters, not caller identities', async () => {
+    const home = filterStore();
+    expect(await lb(home, ['list', '--harness', 'Helmraiser', '--json'])).toEqual({ code: 0, err: '', out: '[]\n' });
+    const result = await lb(home, ['list', '--harness', 'helmraiser', '--json']);
+    expect(result.code).toBe(0);
+    expect(result.err).toBe('');
+    expect(JSON.parse(result.out)).toEqual(listCommand(context(home), { harness: 'helmraiser' }));
   });
 
   it('returns nothing for an unknown or inexact session or harness', () => {

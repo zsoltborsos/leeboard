@@ -138,9 +138,9 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
   if (!command) throw usage('no command given (try --help)');
 
   const home = resolveHome(env);
+  const readCtx = { home, now: new Date() };
   const ctx = (): Ctx => ({
-    home,
-    now: new Date(),
+    ...readCtx,
     cwd: values.cwd ? resolve(values.cwd) : cwd,
     identity: resolveIdentity(values, env),
   });
@@ -204,11 +204,11 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       return showEntrySummary(supersedeEntry(ctx(), arg(0, 'old-id'), values.by ?? fail('usage: lb supersede <old-id> --by <new-id>')));
 
     case 'show': {
-      const { data, text } = showCommand(ctx(), arg(0, 'id'));
+      const { data, text } = showCommand(readCtx, arg(0, 'id'));
       return ok(values.json ? json(data) : text);
     }
     case 'list': {
-      const items = listCommand(ctx(), {
+      const items = listCommand(readCtx, {
         kind: values.kind,
         scope: values.scope,
         status: values.status,
@@ -219,7 +219,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       return ok(values.json ? json(items) : renderList(items));
     }
     case 'search': {
-      const items = searchEntries(ctx(), args.join(' '), { all: values.all });
+      const items = searchEntries(readCtx, args.join(' '), { all: values.all });
       return ok(values.json ? json(items) : renderList(items));
     }
     case 'purge': {

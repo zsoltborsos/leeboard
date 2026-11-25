@@ -164,7 +164,7 @@ describe('trial scorer', () => {
       [sampleEntry({ id: 'rule-replacement-1000', author: owner, supersedes: ['rule-protected-a-0001'] })],
     );
     const lapsed = entries.map((entry) => entry.id === 'rule-protected-b-0002' || entry.id === 'rule-replacement-1000'
-      ? { ...entry, until: '2000-01-01' } : entry);
+      ? { ...entry, until: '1969-12-31' } : entry);
     const before = structuredClone(lapsed);
     const baseline = scoreRun({ baselineIds: ids, entries, report: null, expected });
     const score = scoreRun({ baselineIds: ids, entries: lapsed, report: null, expected });
