@@ -7,6 +7,11 @@ keeping a history; `CURRENT_STATE.md` and git record what landed.
 
 - Upload `docs/brand/leeboard-social.png` as the repository's social preview
   (Settings → General; the API cannot set it).
+- Rerun the opt-in speed test on an idle machine:
+  `env -u CI LEEBOARD_PERF=1 npx vitest run test/perf.test.ts`. On 25 Nov `lb brief`
+  measured 372–412 ms against its 200 ms budget, on `main` and on a branch alike, with
+  a load average around 10 on 8 cores (bare `node -e 0` took 70–200 ms). If it still
+  fails when idle, find the commit that pushed it over.
 
 ## Later
 
