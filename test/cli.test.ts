@@ -86,6 +86,27 @@ describe('acceptance: two sessions sharing one store', () => {
 });
 
 describe('exit codes and errors', () => {
+  it.each([
+    ['--version'],
+    ['-v'],
+    ['init', '--version'],
+    ['-v', 'init'],
+    ['frobnicate', '--version'],
+    ['--version', '--json'],
+  ])('prints the package version without accessing the store: %j', async (...args) => {
+    const { version } = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    const home = join(tempDir('lb-parent-'), 'store');
+    expect(await lb(home, args)).toEqual({ code: 0, out: `${version}\n`, err: '' });
+    expect(existsSync(home)).toBe(false);
+  });
+
+  it('preserves help precedence over version', async () => {
+    const home = join(tempDir('lb-parent-'), 'store');
+    expect(await lb(home, ['--help', '--version'])).toEqual(await lb(home, ['--help']));
+  });
+
   it('2 for credential-like text: names the field, never echoes the value, writes nothing', async () => {
     const home = tempDir('lb-home-');
     const secret = 'ghp_' + 'a1b2c3d4e5'.repeat(3);
@@ -130,6 +151,8 @@ describe('exit codes and errors', () => {
     const result = await lb(tempDir('lb-home-'), ['--help']);
     expect(result.code).toBe(0);
     expect(result.out).toContain('lb brief');
+    expect(result.out).toContain('--version');
+    expect(result.out).toContain('-v');
     expect(result.out).not.toContain('--alias');
     expect(result.out).toContain('[--session <id>]');
     expect(result.out).toContain('[--harness <name>]');
@@ -722,6 +745,15 @@ describe('the built CLI (spawned)', () => {
     });
     return { code: run.status ?? -1, out: run.stdout, err: run.stderr };
   }
+
+  it.each(['--version', '-v'])('prints the installed version from an unrelated cwd: %s', (flag) => {
+    const { version } = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    const home = join(tempDir('lb-parent-'), 'store');
+    expect(spawnLb(home, [flag])).toEqual({ code: 0, out: `${version}\n`, err: '' });
+    expect(existsSync(home)).toBe(false);
+  });
 
   it('reads --body from stdin with --body -', async () => {
     const home = tempDir('lb-home-');

@@ -13,6 +13,7 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   `search`, `purge`, `brief`, `delta`, `check`, `review`, `usage`, `bosun`, and
   `project add|rename|remove|list`. Every command takes `--json`. `list` and `search` show
   active entries unless `--all` (an author-filtered `list` shows every status).
+  `lb --version` / `lb -v` prints the installed package version.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).
@@ -49,6 +50,5 @@ npm run build && npm test && npm run typecheck
 
 ## Known limits
 
-- `lb` has no `--version` flag.
 - The quick pass runs only when called (`lb bosun`, the daily job, or at the start of a
   full pass); `lb brief` ignores lapsed entries but does not expire them.

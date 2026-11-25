@@ -21,6 +21,7 @@ import { initStore, resolveHome } from './store.js';
 
 const USAGE = `Usage: lb <command> [options]
 
+  lb --version, -v                     print the installed package version
   lb brief [--cwd <dir>]                  session-start orientation
   lb delta [--cwd <dir>]                  changes since this session last looked
   lb review [--peek] [--json]             owner digest; marks it seen unless --peek
@@ -59,6 +60,7 @@ const OPTIONS = {
   json: { type: 'boolean' },
   peek: { type: 'boolean' },
   help: { type: 'boolean' },
+  version: { type: 'boolean', short: 'v' },
   quick: { type: 'boolean' },
   full: { type: 'boolean' },
   'if-changed': { type: 'boolean' },
@@ -114,6 +116,12 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv, cwd: string): 
 async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<RunResult> {
   const { values, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
   if (values.help) return ok(USAGE);
+  if (values.version) {
+    const { version } = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    return ok(`${version}\n`);
+  }
   const [command, ...args] = positionals;
   if (!command) throw usage('no command given (try --help)');
 
