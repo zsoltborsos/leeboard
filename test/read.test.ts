@@ -248,7 +248,7 @@ describe('lapsed reads', () => {
     expect((await lb(home, ['init'])).code).toBe(0);
     const help = await lb(home, ['--help']);
     expect(help.code).toBe(0);
-    expect(help.out).toContain('--status lapsed          past its until date, not yet expired by Bosun');
+    expect(help.out).toContain('--status lapsed                    past its until date, not yet expired by Bosun');
     const entry = sampleEntry({ until: '2000-01-01', body: 'Body\nstatus: active\n' });
     writeEntry(home, entry);
     const path = join(scopeDir(home, entry.scope), `${entry.id}.md`);

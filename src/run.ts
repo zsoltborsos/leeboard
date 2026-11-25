@@ -27,26 +27,36 @@ const USAGE = `Usage: lb <command> [options]
   lb review [--peek] [--json]             owner digest; marks it seen unless --peek
   lb check --blocks <tag> [--cwd <dir>]   exit 3 if an active hold blocks the tag
   lb usage [--since <ISO date>] [--json]  observed brief/check usage
-  lb bosun [--quick] [--dry-run] [--json] deterministic store maintenance
+  lb bosun [--quick] [--dry-run] [--json]
+                                          deterministic store maintenance
   lb bosun --full --runner <pi|claude> --model <id> [--thinking <level>]
-           [--memory-root <dir>] [--timeout <minutes>] [--if-changed] [--json]   LLM maintenance pass
+           [--memory-root <dir>] [--timeout <minutes>] [--if-changed] [--json]
+                                          LLM maintenance pass
   lb add <rule|reference|grant|hold|handoff|request> --title <t> [--body <text>|-] [--scope <s>]
   lb hold --title <t> --release <text> [--blocks a,b] [--until <date>]
   lb grant --title <t> --holder <who>
-  lb handoff --title <t> --to <target>    (also: lb request)
-  lb release <id> [--note <text>]         lb ack <id>      lb close <id>
-  lb reply <id> --body <text>|-           lb revoke <id> --reason <text>
+  lb handoff --title <t> --to <target>    also: lb request
+  lb release <id> [--note <text>]
+  lb ack <id>
+  lb close <id>
+  lb reply <id> --body <text>|-
+  lb revoke <id> --reason <text>
   lb revise <id> [--title <t>] [--body <text>|-] [--scope <s>] [--until <d>]
            [--release <t>] [--blocks a,b] [--holder <h>] [--to <target>]
   lb supersede <old-id> --by <new-id>
-  lb show <id>    lb list [--kind k] [--scope s] [--status s|--all] [--session <id>] [--harness <name>]
-                 --status lapsed          past its until date, not yet expired by Bosun
+  lb show <id>
+  lb list [--kind k] [--scope s] [--status s|--all] [--session <id>] [--harness <name>]
+       --status lapsed                    past its until date, not yet expired by Bosun
   lb search <text> [--all]                active entries only, unless --all
   lb purge <id>... [--dry-run]            delete entries for good (owner's word; not Bosun or Helmraiser)
-  lb purge --closed [--days <n>] [--dry-run]   delete entries closed more than n days ago (default ${KEEP_CLOSED_DAYS})
-  lb init         lb project add <name> --path <p> [--remote url]...
-  lb project rename <old> <new> [--path <p>]    lb project list
-  lb project remove <name> [--path <p>]...      unregister a project with no entries left, or drop paths
+  lb purge --closed [--days <n>] [--dry-run]
+                                          delete entries closed more than n days ago (default ${KEEP_CLOSED_DAYS})
+  lb init
+  lb project add <name> --path <p> [--remote url]...
+  lb project rename <old> <new> [--path <p>]
+  lb project list
+  lb project remove <name> [--path <p>]...
+                                          unregister a project with no entries left, or drop paths
 
 List filters on the entry author: --session and --harness combine with --kind, --scope and --status,
 and list every status unless --status is given.

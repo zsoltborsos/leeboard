@@ -162,6 +162,18 @@ describe('exit codes and errors', () => {
     expect(result.out).toContain('lb bosun [--quick] [--dry-run] [--json]');
     expect(result.out).toContain('lb review [--peek] [--json]');
   });
+
+  it('starts every command description in --help at column 43', async () => {
+    const result = await lb(tempDir('lb-home-'), ['--help']);
+    const commands = result.out.split('\n\n')[1]!.split('\n');
+    expect(commands.length).toBeGreaterThan(20);
+    for (const line of commands) {
+      // A description follows a gap of two or more spaces, or fills a line of its own.
+      const gaps = [...line.matchAll(/\S( {2,})(?=\S)/g)].map((gap) => gap.index! + 1 + gap[1]!.length);
+      const own = /^ {2,}\S/.test(line) && !/^ {2}lb |^ {11}\[|^ {7}--/.test(line) ? [line.search(/\S/)] : [];
+      expect([...gaps, ...own].every((column) => column === 42), line).toBe(true);
+    }
+  });
 });
 
 describe('commands', () => {
