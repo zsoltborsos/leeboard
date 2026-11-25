@@ -5,6 +5,7 @@ import { isActive, type Kind, newestFirst, staleHoldDays, summarize, type Summar
 import { clip, describeHold, plural } from '../format.js';
 import { git, type GitRepo } from '../git.js';
 import { logSize, writeCursor } from '../log.js';
+import { showsOwnerReview } from '../policy.js';
 import { addressedToMe, isInboxId, viewFor } from '../scope.js';
 import { listEntries, listEntriesWithDiagnostics } from '../store.js';
 import { appendUsage } from '../usage.js';
@@ -71,7 +72,7 @@ export function brief(ctx: Ctx): BriefData {
     repoState: repoState(ctx.now, view.repo),
     unreadableCount: unreadable.length,
   };
-  if (ctx.identity.harness && ['claude-code', 'pi', 'funkyoctopus', 'user'].includes(ctx.identity.harness)) {
+  if (showsOwnerReview(ctx.identity)) {
     const counts = reviewCounts(review(ctx, { peek: true }));
     if (counts.new + counts.changed + counts.closed > 0) data.ownerReview = counts;
   }
