@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { brief } from '../src/commands/brief.js';
 import { delta, renderDelta } from '../src/commands/delta.js';
@@ -46,6 +46,35 @@ describe('successor-aware delta', () => {
     }]);
     expect(renderDelta(items)).toBe(`- [${old.id}] rule superseded: Old rule → ${target}\n`);
     expect(lines(B)).toBe('');
+  });
+
+  it.each(['direct', 'chain'] as const)('uses the delta clock for a %s endpoint without changing delivery or stored data', (mode) => {
+    const { home, A, B } = world();
+    const old = createEntry(A, { kind: 'rule', title: 'Old rule' });
+    brief(B);
+    const offset = readCursor(home, 'B')!;
+    const next = createEntry(A, { kind: 'rule', title: 'Elsewhere', scope: 'project:beta', until: B.now.toISOString().slice(0, 10) });
+    supersedeEntry(A, old.id, next.id);
+    const end = mode === 'chain'
+      ? createEntry(A, { kind: 'rule', title: 'Terminal', scope: 'project:gamma', until: next.until }) : next;
+    if (mode === 'chain') supersedeEntry(A, next.id, end.id);
+    const entries = mode === 'chain' ? [old, next, end] : [old, next];
+    const paths = [...entries.map((entry) => join(store.scopeDir(home, entry.scope), `${entry.id}.md`)), join(home, 'log.jsonl')];
+    const bytes = paths.map((path) => readFileSync(path));
+    const before = delta(B);
+    expect(before).toEqual([{
+      id: old.id, kind: 'rule', scope: 'project:alpha', title: 'Old rule', event: 'status', status: 'superseded',
+      supersededBy: [next.id], current: end.id,
+    }]);
+    expect(readCursor(home, 'B')).toBe(logSize(home));
+    writeCursor(home, 'B', offset);
+    const after = delta({ ...B, now: new Date(B.now.getTime() + 86_400_000) });
+    expect(after).toEqual(before.map((item) => ({ ...item, current: null })));
+    expect(renderDelta(after)).toBe(`- [${old.id}] rule superseded: Old rule → ${next.id}\n`);
+    expect(readCursor(home, 'B')).toBe(logSize(home));
+    expect(delta(B)).toEqual([]);
+    expect(paths.map((path) => readFileSync(path))).toEqual(bytes);
+    expect(store.findEntry(home, end.id).status).toBe('active');
   });
 
   it('keeps hold release text before the arrow and enriches latest superseded status, not just status events', () => {
@@ -111,6 +140,7 @@ describe('successor-aware delta', () => {
       expect(delta(B)).toHaveLength(2);
       expect(scan).toHaveBeenCalledExactlyOnceWith(home);
       expect(resolve).toHaveBeenCalledTimes(1);
+      expect(resolve).toHaveBeenCalledWith(expect.any(Array), B.now);
     } finally { scan.mockRestore(); resolve.mockRestore(); }
   });
 });
