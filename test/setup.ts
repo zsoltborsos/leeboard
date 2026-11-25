@@ -12,6 +12,8 @@ process.env.HOME = sandbox;
 process.env.LEEBOARD_HOME = join(sandbox, 'unused-store');
 delete process.env.LEEBOARD_HARNESS;
 delete process.env.LEEBOARD_SESSION;
+delete process.env.CLAUDE_CODE_SESSION_ID;
+delete process.env.PI_SESSION_ID;
 
 process.env.GIT_CONFIG_GLOBAL = '/dev/null';
 process.env.GIT_CONFIG_NOSYSTEM = '1';

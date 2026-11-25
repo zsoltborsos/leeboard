@@ -39,6 +39,32 @@ describe('resolveIdentity', () => {
     });
   });
 
+  it("falls back to the harness's own session id when no harness or session is given", () => {
+    expect(resolveIdentity({}, { CLAUDE_CODE_SESSION_ID: 'cc-1' })).toEqual({
+      harness: 'claude-code',
+      session: 'cc-1',
+      origin: 'agent-inferred',
+    });
+    expect(resolveIdentity({}, { PI_SESSION_ID: 'pi-1' })).toEqual({
+      harness: 'pi',
+      session: 'pi-1',
+      origin: 'agent-inferred',
+    });
+    expect(resolveIdentity({ harness: 'claude-code' }, { CLAUDE_CODE_SESSION_ID: 'cc-2' })).toMatchObject({
+      harness: 'claude-code',
+      session: 'cc-2',
+    });
+  });
+
+  it('keeps an explicit identity over the harness session id, and guesses nothing when both harnesses are set', () => {
+    const outer = { CLAUDE_CODE_SESSION_ID: 'outer' };
+    expect(resolveIdentity({}, { ...outer, LEEBOARD_HARNESS: 'helmraiser' })).toMatchObject({ harness: 'helmraiser', session: null });
+    expect(resolveIdentity({ harness: 'pi' }, outer)).toMatchObject({ harness: 'pi', session: null });
+    expect(resolveIdentity({ session: 'other-tool' }, outer)).toMatchObject({ harness: null, session: 'other-tool' });
+    expect(resolveIdentity({}, { ...outer, LEEBOARD_SESSION: 'run-9' })).toMatchObject({ harness: null, session: 'run-9' });
+    expect(resolveIdentity({}, { CLAUDE_CODE_SESSION_ID: 'a', PI_SESSION_ID: 'b' })).toMatchObject({ harness: null, session: null });
+  });
+
   it.each([
     [{ harness: 'emacs' }],
     [{ origin: 'guessed' }],

@@ -61,7 +61,8 @@ const USAGE = `Usage: lb <command> [options]
 List filters on the entry author: --session and --harness combine with --kind, --scope and --status,
 and list every status unless --status is given.
 Targets (--to): project:<name>, session:<id>, harness:<name>, any.
-Identity: --harness --session --origin, or LEEBOARD_HARNESS / LEEBOARD_SESSION.
+Identity: --harness --session --origin, or LEEBOARD_HARNESS / LEEBOARD_SESSION,
+or else CLAUDE_CODE_SESSION_ID (claude-code) / PI_SESSION_ID (pi).
 Store: LEEBOARD_HOME (default ~/.leeboard). Every command accepts --json.
 Ids may be abbreviated to a unique prefix, or to their four-character hash.
 Exit codes: 0 success, 1 usage, 2 credential rejection, 3 check blocked, 4 unknown/ambiguous id, 5 disallowed transition, 6 not permitted.

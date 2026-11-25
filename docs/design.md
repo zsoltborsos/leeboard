@@ -269,7 +269,10 @@ may not run it.
 Every command accepts `--json`. Identity comes from flags or environment:
 `--harness` / `LEEBOARD_HARNESS`, `--session` / `LEEBOARD_SESSION`, and `--origin`
 (`user-stated`, `agent-inferred` by default, `mirrored`). A session id may be up to 128
-characters. `--cwd <dir>` overrides the working directory.
+characters. With no harness or session from either, Leeboard takes the session id the
+harness sets for its agents: `CLAUDE_CODE_SESSION_ID` as `claude-code`, `PI_SESSION_ID`
+as `pi`. It also fills the session when only that matching harness was given, and guesses
+nothing when both variables are set. `--cwd <dir>` overrides the working directory.
 
 `--version` / `-v` prints the installed package version and exits successfully without
 requiring a command. It takes precedence over a supplied command and remains plain text
@@ -342,7 +345,8 @@ id; the first call with a new id sets the cursor to the end of the log and print
 nothing. With nothing new it prints nothing.
 
 `lb review` is the owner's view: everything new, changed or closed across the whole store
-since the owner last looked, with who wrote it and its origin, and what a revision
+since the owner last looked, with who created it (new entries) or who made the latest
+change (changed and closed ones), its origin, and what a revision
 changed. It moves the owner's cursor unless `--peek` is given.
 
 ## 8. Delivery to harnesses

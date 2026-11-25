@@ -184,7 +184,8 @@ handoffs and requests for every agent session.
 Tags after `--blocks` are free strings. `push`, `merge` and `deploy` are the convention;
 use any tag your gates agree on. The identity variables above are the ones Claude Code and
 Pi provide to their agents; you can also export `LEEBOARD_HARNESS` and `LEEBOARD_SESSION`
-instead of passing flags. The harness names Leeboard knows are `claude-code`, `pi`,
+instead of passing flags. With neither, `lb` falls back to `CLAUDE_CODE_SESSION_ID` or
+`PI_SESSION_ID`, so a write without flags is still attributed (not when both are set). The harness names Leeboard knows are `claude-code`, `pi`,
 `helmraiser`, `funkyoctopus`, `bosun` and `user`. Any other name is refused (exit 1);
 from another tool, omit `--harness` and pass only `--session`.
 
@@ -310,6 +311,7 @@ pushes the store. See [deploy/README.md](deploy/README.md).
 | `LEEBOARD_HOME` | Store directory; default `~/.leeboard` |
 | `LEEBOARD_HARNESS` | Default for `--harness` |
 | `LEEBOARD_SESSION` | Default for `--session` |
+| `CLAUDE_CODE_SESSION_ID` / `PI_SESSION_ID` | Fallback identity (`claude-code` / `pi`) when neither flags nor `LEEBOARD_*` give one |
 
 ## Exit codes
 

@@ -94,7 +94,7 @@ describe('successor-aware owner review', () => {
     logChange(A, old, 'created');
     const data = reviewCommand(B, { peek: true });
     expect(data.new[0]).toMatchObject({ supersededBy: mode === 'missing' ? [] : ['rule-next-0002'], current: null });
-    expect(renderReview(data)).toBe(`## New\n- [${old.id}] rule global: Orphan (claude-code/abcdefgh, agent-inferred)${mode === 'missing' ? '' : ' → rule-next-0002'}\n`);
+    expect(renderReview(data)).toBe(`## New\n- [${old.id}] rule global: Orphan (claude-code/A, agent-inferred)${mode === 'missing' ? '' : ' → rule-next-0002'}\n`);
     const result = await lb(home, ['review', '--peek', '--json']);
     expect(JSON.parse(result.out).new[0].supersededBy).toEqual(mode === 'missing' ? [] : ['rule-next-0002']);
     expect(JSON.parse(result.out).new[0]).not.toHaveProperty('current');
@@ -300,7 +300,8 @@ describe('owner review', () => {
     releaseHold(B, hold.id);
 
     const data = review(B);
-    expect(data.new).toMatchObject([{ id: fresh.id, status: 'revoked', harness: 'pi', session: 'reviewer-session' }]);
+    // New entries name their creator; changed and closed ones name who made the change.
+    expect(data.new).toMatchObject([{ id: fresh.id, status: 'revoked', harness: 'claude-code', session: 'abcdefgh-1234' }]);
     expect(data.changed).toMatchObject([{ id: request.id, status: 'active', harness: 'pi' }]);
     expect(data.closed).toMatchObject([{ id: hold.id, status: 'released', harness: 'pi' }]);
     expect(renderReview(data).match(/^## .+$/gm)).toEqual(['## New', '## Changed', '## Closed']);

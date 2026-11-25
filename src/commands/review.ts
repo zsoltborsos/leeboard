@@ -61,8 +61,9 @@ export function review(ctx: Ctx, options: { peek?: boolean; details?: boolean } 
       scope: line.scope,
       title: entry.title,
       status: line.status,
-      harness: line.harness,
-      session: line.session,
+      // A new entry names its creator; a changed or closed one names who made the change.
+      harness: group === data.new ? entry.author.harness : line.harness,
+      session: group === data.new ? entry.author.session : line.session,
       origin: entry.author.origin,
     };
     for (const event of revisions.get(line.id) ?? []) {

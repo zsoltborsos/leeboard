@@ -19,6 +19,8 @@ First public release.
   `request`, `release`, `ack`, `reply`, `close`, `revoke`, `supersede`, `revise`, `show`,
   `list`, `search`, and `project add|rename|remove|list`. Every command accepts `--json`.
   Ids may be given as a unique prefix or as their four-character hash.
+- Identity falls back to `CLAUDE_CODE_SESSION_ID` (`claude-code`) or `PI_SESSION_ID`
+  (`pi`) when neither flags nor `LEEBOARD_HARNESS`/`LEEBOARD_SESSION` give one.
 - `lb --version` (alias `-v`) prints the installed package version.
 - `lb brief`, a session-start orientation of at most 8,000 characters, and `lb delta`,
   what other sessions changed since this session's brief.
@@ -31,7 +33,8 @@ First public release.
   and displayed as `lapsed` in all-status views and show (text/JSON).
   `lb list --status lapsed` selects them. This is display-only; reads change neither
   entries nor log, and Bosun still persists `expired`.
-- `lb review`, the owner's digest of new, changed and closed entries, and `lb usage`, a
+- `lb review`, the owner's digest of new, changed and closed entries (new entries name
+  their creator; changed and closed ones name who made the change), and `lb usage`, a
   count of observed brief and check calls with sample sizes.
 - In-place revision of entries with archived previous versions, and a store-wide lock for
   revisions and lifecycle changes.
