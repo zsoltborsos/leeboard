@@ -15,8 +15,7 @@ export function showCommand(home: string, idPrefix: string): {
 } {
   const entry = showEntry(home, idPrefix);
   const status = displayStatus(entry, new Date());
-  let text = serializeEntry(entry);
-  if (status === 'lapsed') text = text.replace(/^status: active$/m, 'status: lapsed');
+  let text = serializeEntry({ ...entry, status } as Entry);
   if (entry.status !== 'superseded') return { data: { ...entry, status }, text };
 
   const { successors, current, chainEnd } = createSuccessorResolver(listEntries(home))(entry.id);

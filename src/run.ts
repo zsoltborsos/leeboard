@@ -40,6 +40,7 @@ const USAGE = `Usage: lb <command> [options]
            [--release <t>] [--blocks a,b] [--holder <h>] [--to <target>]
   lb supersede <old-id> --by <new-id>
   lb show <id>    lb list [--kind k] [--scope s] [--status s|--all] [--session <id>] [--harness <name>]
+                 --status lapsed        past its until date, not yet expired by Bosun
   lb search <text> [--all]                active entries only, unless --all
   lb purge <id>... [--dry-run]            delete entries for good (owner's word; not Bosun or Helmraiser)
   lb purge --closed [--days <n>] [--dry-run]   delete entries closed more than n days ago (default ${KEEP_CLOSED_DAYS})

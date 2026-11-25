@@ -7,12 +7,6 @@ import { EXIT, LeeboardError } from '../src/errors.js';
 import { scopeDir, writeEntry } from '../src/store.js';
 import { lb, sampleEntry, tempDir } from './helpers.js';
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date('2026-10-17T12:00:00Z'));
-});
-afterEach(() => vi.useRealTimers());
-
 function failure(fn: () => unknown): LeeboardError {
   try {
     fn();
@@ -207,6 +201,12 @@ describe('search', () => {
 });
 
 describe('lapsed reads', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-17T12:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
   function fixture() {
     const home = tempDir();
     const entries = [
@@ -246,6 +246,9 @@ describe('lapsed reads', () => {
   it('reports lapsed through the CLI without changing the entry or log', async () => {
     const home = tempDir();
     expect((await lb(home, ['init'])).code).toBe(0);
+    const help = await lb(home, ['--help']);
+    expect(help.code).toBe(0);
+    expect(help.out).toContain('--status lapsed        past its until date, not yet expired by Bosun');
     const entry = sampleEntry({ until: '2000-01-01', body: 'Body\nstatus: active\n' });
     writeEntry(home, entry);
     const path = join(scopeDir(home, entry.scope), `${entry.id}.md`);
@@ -309,7 +312,7 @@ describe('summary metadata', () => {
         author: { harness: 'helmraiser', session: 'run-42', origin: 'mirrored' },
         created: '2026-10-17T10:00:00Z',
         updated: '2026-10-17T12:00:00Z',
-        until: '2026-11-01',
+        until: '2999-11-01',
         release: 'r',
         blocks: ['tag'],
         holder: 'h',
@@ -336,7 +339,7 @@ describe('summary metadata', () => {
       expect(authored.author).toEqual({ harness: 'helmraiser', session: 'run-42', origin: 'mirrored' });
       expect(authored.created).toBe('2026-10-17T10:00:00Z');
       expect(authored.updated).toBe('2026-10-17T12:00:00Z');
-      expect(authored.until).toBe('2026-11-01');
+      expect(authored.until).toBe('2999-11-01');
       expect(authored.release).toBe('r');
       expect(authored.blocks).toEqual(['tag']);
       expect(authored.holder).toBe('h');
