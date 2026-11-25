@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createEntry, type RevisionInput } from '../change.js';
+import { createEntry, reviseEntry, type RevisionInput } from '../change.js';
 import type { Ctx } from '../context.js';
 import { type Entry, summarize } from '../entry.js';
 import { usageError } from '../errors.js';
@@ -17,6 +17,9 @@ interface WriteFlags {
   blocks?: string;
   holder?: string;
   to?: string;
+  kind?: string;
+  origin?: string;
+  status?: string;
 }
 
 function entryFields(flags: WriteFlags): RevisionInput {
@@ -66,6 +69,14 @@ export function handoffCommand(ctx: () => Ctx, flags: WriteFlags): RunResult {
 
 export function requestCommand(ctx: () => Ctx, flags: WriteFlags): RunResult {
   return createCommand(ctx, 'request', flags);
+}
+
+export function reviseCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  if (id === undefined) throw usageError('usage: lb revise <id>');
+  for (const flag of ['kind', 'origin', 'status'] as const) {
+    if (flags[flag] !== undefined) throw usageError(`--${flag} cannot be changed by revise`);
+  }
+  return summaryResult(reviseEntry(ctx(), id, entryFields(flags)), flags);
 }
 
 export function initCommand(home: string, flags: { json?: boolean }): RunResult {

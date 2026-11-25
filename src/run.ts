@@ -8,8 +8,8 @@ import { deltaCommand } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
-import { ackHandoff, closeRequest, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
-import { addCommand, grantCommand, handoffCommand, holdCommand, initCommand, requestCommand } from './commands/write.js';
+import { ackHandoff, closeRequest, releaseHold, replyToRequest, revokeEntry, supersedeEntry } from './change.js';
+import { addCommand, grantCommand, handoffCommand, holdCommand, initCommand, requestCommand, reviseCommand } from './commands/write.js';
 import type { Ctx } from './context.js';
 import { type Entry, summarize } from './entry.js';
 import { EXIT, LeeboardError, usageError } from './errors.js';
@@ -154,22 +154,8 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     case 'request':
       return requestCommand(ctx, values);
 
-    case 'revise': {
-      const id = arg(0, 'id');
-      for (const flag of ['kind', 'origin', 'status'] as const) {
-        if (values[flag] !== undefined) throw usageError(`--${flag} cannot be changed by revise`);
-      }
-      return showEntrySummary(reviseEntry(ctx(), id, {
-        title: values.title,
-        body: readBody(values.body),
-        scope: values.scope,
-        until: values.until,
-        release: values.release,
-        blocks: values.blocks?.split(',').map((tag) => tag.trim()).filter(Boolean),
-        holder: values.holder,
-        to: values.to,
-      }));
-    }
+    case 'revise':
+      return reviseCommand(ctx, args[0], values);
     case 'release':
       return showEntrySummary(releaseHold(ctx(), arg(0, 'id'), values.note));
     case 'ack':

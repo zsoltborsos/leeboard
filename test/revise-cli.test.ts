@@ -47,6 +47,27 @@ describe('lb revise', () => {
     expect(findEntry(home, entry.id)).toEqual(entry);
   });
 
+  it.each(['kind', 'origin', 'status'])('refuses --%s before identity and leaves the entry unchanged', async (flag) => {
+    const { home, entry } = world();
+    for (const identity of [[], ['--harness', 'invalid']]) {
+      expect(await lb(home, ['revise', entry.id, `--${flag}`, '', ...identity])).toEqual({
+        code: 1, out: '', err: `lb: --${flag} cannot be changed by revise\n`,
+      });
+      expect(await lb(home, ['revise', `--${flag}`, '', ...identity])).toEqual({
+        code: 1, out: '', err: 'lb: usage: lb revise <id>\n',
+      });
+      expect(findEntry(home, entry.id)).toEqual(entry);
+    }
+  });
+
+  it('checks forbidden flags in kind, origin, status order', async () => {
+    const { home, entry } = world();
+    expect(await lb(home, ['revise', entry.id, '--status', 'done', '--origin', 'invalid', '--kind', 'rule'])).toEqual({
+      code: 1, out: '', err: 'lb: --kind cannot be changed by revise\n',
+    });
+    expect(findEntry(home, entry.id)).toEqual(entry);
+  });
+
   it.each([
     [['missing', '--title', 'new'], 4],
     [['rule-sample-0001', '--title', 'ghp_' + 'abc123'.repeat(5)], 2],
