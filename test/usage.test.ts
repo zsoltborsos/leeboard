@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path';
 import { briefCommand, brief, renderBrief, type BriefData } from '../src/commands/brief.js';
 import { check, checkCommand } from '../src/commands/check.js';
-import { usage, renderUsage } from '../src/commands/usage.js';
+import { usage, usageCommand, renderUsage } from '../src/commands/usage.js';
 import { createEntry } from '../src/change.js';
 import type { Ctx } from '../src/context.js';
 import type { Entry } from '../src/entry.js';
@@ -340,6 +340,25 @@ function fixture(): UsageLine[] {
     briefRecord({ ts: '2026-09-01T00:00:00Z', session: 'Z', project: 'P' }),
   ];
 }
+
+describe('usage command results', () => {
+  it('finishes the seeded report as text or one JSON line without writing', () => {
+    const home = tempDir();
+    seed(home, fixture());
+    const before = readFileSync(usagePath(home));
+    const report = usage(home, '2026-10-01');
+    expect(usageCommand(home, { since: '2026-10-01' })).toEqual({ code: 0, stdout: renderUsage(report), stderr: '' });
+    expect(usageCommand(home, { since: '2026-10-01', json: true })).toEqual({ code: 0, stdout: JSON.stringify(report) + '\n', stderr: '' });
+    expect(readFileSync(usagePath(home))).toEqual(before);
+  });
+
+  it('preserves the exact cutoff error and creates no state for a missing log', () => {
+    const home = tempDir();
+    expect(() => usageCommand(home, { since: 'invalid' })).toThrow("invalid --since 'invalid' (use an ISO date or timestamp with timezone)");
+    expect(usageCommand(home, { json: true })).toEqual({ code: 0, stdout: JSON.stringify(usage(home)) + '\n', stderr: '' });
+    expect(existsSync(join(home, 'state'))).toBe(false);
+  });
+});
 
 describe('usage report', () => {
   it('counts brief calls, sessions, anonymous and breakdowns with sample sizes', () => {

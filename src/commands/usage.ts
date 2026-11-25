@@ -1,4 +1,5 @@
 import { EXIT, LeeboardError } from '../errors.js';
+import { jsonLine, ok, type RunResult } from '../result.js';
 import { readUsage, summarizeUsage, type Metric, type UsageReport } from '../usage.js';
 
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})$/;
@@ -7,6 +8,11 @@ const ISO_TIMESTAMP = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z
 /** The report for `home`, restricted to calls at or after `since` when given. */
 export function usage(home: string, since?: string): UsageReport {
   return summarizeUsage(readUsage(home), parseSince(since));
+}
+
+export function usageCommand(home: string, flags: { since?: string; json?: boolean }): RunResult {
+  const report = usage(home, flags.since);
+  return ok(flags.json ? jsonLine(report) : renderUsage(report));
 }
 
 /**

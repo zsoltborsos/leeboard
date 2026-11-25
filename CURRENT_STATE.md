@@ -26,7 +26,7 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   creation and revision. `project` owns its validation and results in
   `src/commands/project.ts`. `show`, `list` and `search` return finished results from
   `src/commands/read.ts`. `brief` owns its result and rendered-size telemetry;
-  remaining usage and Bosun reports follow.
+    `usage` owns its report result; only Bosun dispatch remains to convert.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).

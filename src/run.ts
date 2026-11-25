@@ -5,7 +5,7 @@ import { briefCommand } from './commands/brief.js';
 import { bosun, renderBosun } from './commands/bosun.js';
 import { checkCommand } from './commands/check.js';
 import { deltaCommand } from './commands/delta.js';
-import { usage as usageReport, renderUsage } from './commands/usage.js';
+import { usageCommand } from './commands/usage.js';
 import { listCommand, type ReadCtx, searchCommand, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
 import { ackCommand, addCommand, closeCommand, grantCommand, handoffCommand, holdCommand, initCommand, releaseCommand, replyCommand, requestCommand, reviseCommand, revokeCommand, supersedeCommand } from './commands/write.js';
@@ -185,10 +185,8 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       return reviewCommand(ctx(), { peek: values.peek, json: values.json });
     case 'check':
       return checkCommand(ctx(), { tag: values.blocks ?? '', json: values.json });
-    case 'usage': {
-      const report = usageReport(home, values.since);
-      return ok(values.json ? jsonLine(report) : renderUsage(report));
-    }
+    case 'usage':
+      return usageCommand(home, values);
     case 'bosun': {
       if (values.full) {
         if (values['dry-run'] || values.quick) throw usageError('bosun --full does not combine with --quick or --dry-run');
