@@ -177,10 +177,8 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
         json: values.json,
       });
 
-    case 'brief': {
-      const { data, text } = briefCommand(ctx());
-      return ok(values.json ? jsonLine(data) : text);
-    }
+    case 'brief':
+      return briefCommand(ctx(), { json: values.json });
     case 'delta':
       return deltaCommand(ctx(), { json: values.json });
     case 'review':

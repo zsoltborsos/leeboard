@@ -6,6 +6,7 @@ import { clip, describeHold, plural } from '../format.js';
 import { git, type GitRepo } from '../git.js';
 import { logSize, writeCursor } from '../log.js';
 import { showsOwnerReview } from '../policy.js';
+import { jsonLine, ok, type RunResult } from '../result.js';
 import { addressedToMe, isInboxId, viewFor } from '../scope.js';
 import { listEntries, listEntriesWithDiagnostics } from '../store.js';
 import { appendUsage } from '../usage.js';
@@ -82,13 +83,13 @@ export function brief(ctx: Ctx): BriefData {
 
 /**
  * The CLI entry point for `brief`: gather and render, then record the call. The usage
- * write is best-effort; the returned data and text are exactly what `brief` produced.
+ * write is best-effort; JSON mode still records the rendered text's size and count.
  */
-export function briefCommand(ctx: Ctx): { data: BriefData; text: string } {
+export function briefCommand(ctx: Ctx, flags: { json?: boolean } = {}): RunResult {
   const data = brief(ctx);
   const { text, entries } = renderBriefWithCount(data);
   appendUsage(ctx, data.project, { command: 'brief', entries, chars: text.length });
-  return { data, text };
+  return ok(flags.json ? jsonLine(data) : text);
 }
 
 function repoState(now: Date, repo: GitRepo | null): RepoFileState[] {

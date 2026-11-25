@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { briefCommand, brief, renderBrief } from '../src/commands/brief.js';
+import { briefCommand, brief, renderBrief, type BriefData } from '../src/commands/brief.js';
 import { check, checkCommand } from '../src/commands/check.js';
 import { usage, renderUsage } from '../src/commands/usage.js';
 import { createEntry } from '../src/change.js';
@@ -158,13 +158,29 @@ describe('brief and check recording', () => {
 
     const empty = briefCommand(ctx);
     expect(readUsage(home)).toHaveLength(1);
-    expect(readUsage(home)[0]).toMatchObject({ command: 'brief', project: 'P', entries: 0, chars: empty.text.length });
+    expect(empty).toMatchObject({ code: 0, stderr: '' });
+    expect(readUsage(home)[0]).toMatchObject({ command: 'brief', project: 'P', entries: 0, chars: empty.stdout.length });
 
     createEntry(ctx, { kind: 'rule', title: 'A rule' });
     const populated = briefCommand(ctx);
     const records = readUsage(home);
     expect(records).toHaveLength(2);
-    expect(records[1]).toMatchObject({ command: 'brief', project: 'P', entries: 1, chars: populated.text.length });
+    expect(populated).toMatchObject({ code: 0, stderr: '' });
+    expect(records[1]).toMatchObject({ command: 'brief', project: 'P', entries: 1, chars: populated.stdout.length });
+  });
+
+  it('records rendered size and count exactly once in JSON mode', () => {
+    const { home, repo } = projectWorld();
+    const ctx = ctxFor(home, repo);
+    createEntry(ctx, { kind: 'rule', title: 'JSON brief' });
+    const result = briefCommand(ctx, { json: true });
+    expect(result).toMatchObject({ code: 0, stderr: '' });
+    const data = JSON.parse(result.stdout) as BriefData;
+    expect(data).toEqual(brief(ctx));
+    const text = renderBrief(data);
+    expect(result.stdout).toBe(JSON.stringify(data) + '\n');
+    expect(result.stdout.length).not.toBe(text.length);
+    expect(readUsage(home)).toEqual([expect.objectContaining({ command: 'brief', entries: 1, chars: text.length })]);
   });
 
   it('records the resolved project, and null outside a registered project', () => {
@@ -191,13 +207,14 @@ describe('brief and check recording', () => {
     }
 
     const result = briefCommand(ctx);
-    expect(result.text).toBe(renderBrief(result.data));
-    expect(result.text.length).toBeLessThanOrEqual(8000);
-    const visible = (result.text.match(/^- \[/gm) ?? []).length;
+    expect(result).toMatchObject({ code: 0, stderr: '' });
+    expect(result.stdout).toBe(renderBrief(brief(ctx)));
+    expect(result.stdout.length).toBeLessThanOrEqual(8000);
+    const visible = (result.stdout.match(/^- \[/gm) ?? []).length;
     expect(visible).toBeGreaterThan(0);
     expect(visible).toBeLessThan(151);
     const record = readUsage(home).at(-1)!;
-    expect(record).toMatchObject({ command: 'brief', entries: visible, chars: result.text.length });
+    expect(record).toMatchObject({ command: 'brief', entries: visible, chars: result.stdout.length });
   });
 
   it('records a clear check and a blocked check with the tag and boolean', () => {
@@ -260,15 +277,19 @@ describe('brief and check recording', () => {
     const ctx = ctxFor(home, repo);
     createEntry(ctx, { kind: 'hold', title: 'No deploys', release: 'r', blocks: ['deploy'] });
 
-    const firstBrief = briefCommand(ctx);
+    const firstBrief = briefCommand(ctx, { json: true });
     const firstCheck = checkCommand(ctx, { tag: 'deploy', json: false });
     rmSync(join(home, 'state', 'usage.jsonl'), { force: true });
     mkdirSync(join(home, 'state', 'usage.jsonl'), { recursive: true });
 
-    const secondBrief = briefCommand(ctx);
+    const secondBrief = briefCommand(ctx, { json: true });
     const secondCheck = checkCommand(ctx, { tag: 'deploy', json: false });
-    expect(secondBrief.data).toEqual(firstBrief.data);
-    expect(secondBrief.text).toEqual(firstBrief.text);
+    expect(firstBrief).toMatchObject({ code: 0, stderr: '' });
+    expect(secondBrief).toEqual(firstBrief);
+    const firstData = JSON.parse(firstBrief.stdout) as BriefData;
+    const secondData = JSON.parse(secondBrief.stdout) as BriefData;
+    expect(secondData).toEqual(firstData);
+    expect(renderBrief(secondData)).toEqual(renderBrief(firstData));
     expect(secondCheck).toEqual(firstCheck);
   });
 
