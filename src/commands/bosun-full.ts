@@ -9,7 +9,7 @@ import type { Ctx } from '../context.js';
 import { timestamp } from '../entry.js';
 import { EXIT, LeeboardError } from '../errors.js';
 import { logSize, readLogSince } from '../log.js';
-import type { RunResult } from '../run.js';
+import { json, ok, type RunResult } from '../result.js';
 import { listEntries, writeFileAtomic } from '../store.js';
 import { bosun, type BosunReport, renderBosun } from './bosun.js';
 
@@ -63,7 +63,6 @@ export interface FullResult {
 }
 
 const usage = (message: string): LeeboardError => new LeeboardError(message, EXIT.USAGE);
-const json = (data: unknown): string => JSON.stringify(data) + '\n';
 const DEFAULT_MEMORY_ROOT = (): string => join(homedir(), '.claude', 'projects');
 
 /** Where the last clean full pass left the change log, so an idle day can skip the agent. */
@@ -129,7 +128,7 @@ export async function bosunFullCommand({ home, ctx, env, cwd }: FullContext, fla
     if (!gate.needed) {
       const report = bosun(ctx());
       const stdout = flags.json ? json({ skipped: true, reason: gate.reason, quick: report }) : `Bosun full pass skipped: ${gate.reason}\n${renderBosun(report)}`;
-      return { code: 0, stdout, stderr: '' };
+      return ok(stdout);
     }
   }
   const result = await bosunFull(ctx(), {

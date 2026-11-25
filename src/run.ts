@@ -18,6 +18,7 @@ import { renameProject } from './project-rename.js';
 import { addProject, listProjects, type Project } from './projects.js';
 import { KEEP_CLOSED_DAYS, purgeEntries, renderPurge } from './purge.js';
 import { initStore, resolveHome } from './store.js';
+import { json, ok, type RunResult } from './result.js';
 
 const USAGE = `Usage: lb <command> [options]
 
@@ -107,13 +108,6 @@ const OPTIONS = {
   remote: { type: 'string', multiple: true },
 } as const;
 
-export interface RunResult {
-  code: number;
-  stdout: string;
-  stderr: string;
-}
-
-const ok = (stdout = ''): RunResult => ({ code: 0, stdout, stderr: '' });
 const usage = (message: string): LeeboardError => new LeeboardError(message, EXIT.USAGE);
 
 export async function run(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<RunResult> {
@@ -145,7 +139,6 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     identity: resolveIdentity(values, env),
   });
   const arg = (index: number, name: string): string => args[index] ?? fail(`usage: lb ${command} <${name}>`);
-  const json = (data: unknown): string => JSON.stringify(data) + '\n';
   const showEntrySummary = (entry: Entry): RunResult => ok(values.json ? json(summarize(entry)) : renderList([summarize(entry)]));
   const newEntry = (kind: string): RunResult =>
     showEntrySummary(
@@ -289,7 +282,6 @@ function project(
   values: { json?: boolean; path?: string[]; remote?: string[] },
   ctx: () => Ctx,
 ): RunResult {
-  const json = (data: unknown): string => JSON.stringify(data) + '\n';
   const describe = (p: Project): string =>
     `- ${p.name} — paths: ${p.paths.join(', ')}` +
     (p.remotes.length ? ` — remotes: ${p.remotes.join(', ')}` : '') +

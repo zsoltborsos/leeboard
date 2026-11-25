@@ -17,8 +17,8 @@ keeping a history; `CURRENT_STATE.md` and git record what landed.
 
 From the 25 Nov architecture review; explore before committing to them.
 
-- Command modules: the `check` pilot landed; `checkCommand` owns its exit code,
-  JSON shape and rendered output. `run.ts` still owns option parsing, usage text
-  and routing. Whether to convert the remaining commands is still to decide.
+- Command modules: `check` is converted and owns its exit code, JSON shape and
+  rendered output, using `src/result.ts`. `run.ts` retains option parsing, usage
+  text, routing and thrown-error mapping for it. The remaining commands follow.
 - Project registry: one module owns the `projects/<name>/` layout and the
   `project:<name>` scope string; rename and remove become its operations.

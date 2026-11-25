@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 import type { Kind, Status } from '../src/entry.js';
 import { readLogSince } from '../src/log.js';
-import type { RunResult } from '../src/run.js';
+import type { RunResult } from '../src/result.js';
 import { findEntry, listEntries, readRevision, writeEntry } from '../src/store.js';
 import { requireBuild, sampleEntry, tempDir } from './helpers.js';
 

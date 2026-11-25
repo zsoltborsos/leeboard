@@ -3,7 +3,7 @@ import type { Ctx } from '../context.js';
 import { isActive, kindOfId, newestFirst, summarize, type Summary } from '../entry.js';
 import { EXIT, LeeboardError } from '../errors.js';
 import { describeHold } from '../format.js';
-import type { RunResult } from '../run.js';
+import { json as jsonLine, type RunResult } from '../result.js';
 import { viewFor } from '../scope.js';
 import { listEntriesWithDiagnostics, type UnreadableEntryFile } from '../store.js';
 import { appendUsage } from '../usage.js';
@@ -35,7 +35,7 @@ export function checkCommand(ctx: Ctx, tag: string, json: boolean | undefined): 
   appendUsage(ctx, data.project, { command: 'check', tag, blocked });
   return {
     code: blocked ? EXIT.CHECK_BLOCKED : 0,
-    stdout: json ? JSON.stringify([
+    stdout: json ? jsonLine([
       ...data.holds,
       ...data.unreadable.map(({ path, error }) => ({
         id: basename(path, '.md'),
@@ -44,7 +44,7 @@ export function checkCommand(ctx: Ctx, tag: string, json: boolean | undefined): 
         release: 'fix or remove this file',
         unreadable: true,
       })),
-    ]) + '\n' : renderCheck(data.holds, data.unreadable),
+    ]) : renderCheck(data.holds, data.unreadable),
     stderr: '',
   };
 }
