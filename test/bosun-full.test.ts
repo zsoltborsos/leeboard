@@ -350,6 +350,7 @@ describe('lb bosun --full', () => {
     const source = readFileSync(join(import.meta.dirname, '..', 'dist', 'run.js'), 'utf8');
     expect(source).not.toMatch(/^import[^;]*bosun-full/m);
     expect(source).not.toMatch(/^import[^;]*\/bosun\//m);
+    expect(source).toContain("from './commands/bosun.js'");
     const bosunSource = readFileSync(join(import.meta.dirname, '..', 'dist', 'commands', 'bosun.js'), 'utf8');
     expect(bosunSource).not.toMatch(/^import[^;]*bosun-full/m);
     expect(bosunSource).not.toMatch(/^import[^;]*\/bosun\//m);
