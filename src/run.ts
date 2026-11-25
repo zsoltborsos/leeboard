@@ -21,7 +21,7 @@ import { initStore, resolveHome } from './store.js';
 
 const USAGE = `Usage: lb <command> [options]
 
-  lb --version, -v                     print the installed package version
+  lb --version, -v                        print the installed package version
   lb brief [--cwd <dir>]                  session-start orientation
   lb delta [--cwd <dir>]                  changes since this session last looked
   lb review [--peek] [--json]             owner digest; marks it seen unless --peek
