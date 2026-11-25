@@ -16,7 +16,7 @@ import { resolveIdentity } from './identity.js';
 import { removeProject } from './project-remove.js';
 import { renameProject } from './project-rename.js';
 import { addProject, listProjects, type Project } from './projects.js';
-import { KEEP_CLOSED_DAYS, purgeEntries, renderPurge } from './purge.js';
+import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './purge.js';
 import { initStore, resolveHome } from './store.js';
 import { json, ok, type RunResult } from './result.js';
 
@@ -51,7 +51,7 @@ const USAGE = `Usage: lb <command> [options]
   lb search <text> [--all]                active entries only, unless --all
   lb purge <id>... [--dry-run]            delete entries for good (owner's word; not Bosun or Helmraiser)
   lb purge --closed [--days <n>] [--dry-run]
-                                          delete entries closed more than n days ago (default ${KEEP_CLOSED_DAYS})
+                                          ${PURGE_CLOSED_DESCRIPTION}
   lb init
   lb project add <name> --path <p> [--remote url]...
   lb project rename <old> <new> [--path <p>]
@@ -215,14 +215,13 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       const items = searchEntries(readCtx, args.join(' '), { all: values.all });
       return ok(values.json ? json(items) : renderList(items));
     }
-    case 'purge': {
-      if (Boolean(values.closed) === (args.length > 0)) throw usage('usage: lb purge <id>... | lb purge --closed [--days <n>]');
-      if (values.days !== undefined && !values.closed) throw usage('--days goes with --closed');
-      const days = values.days === undefined ? KEEP_CLOSED_DAYS : Number(values.days);
-      if (!Number.isInteger(days) || days < 0) throw usage('--days must be a whole number of days, 0 or more');
-      const result = purgeEntries(ctx(), values.closed ? { closed: true, days } : { ids: args }, { dryRun: values['dry-run'] });
-      return ok(values.json ? json(result) : renderPurge(result));
-    }
+    case 'purge':
+      return purgeCommand(ctx, args, {
+        closed: values.closed,
+        days: values.days,
+        dryRun: values['dry-run'],
+        json: values.json,
+      });
 
     case 'brief': {
       const { data, text } = briefCommand(ctx());

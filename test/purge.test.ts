@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { EXIT } from '../src/errors.js';
-import { scopeDir, writeEntry } from '../src/store.js';
+import { createEntry } from '../src/change.js';
+import type { Ctx } from '../src/context.js';
+import { summarize } from '../src/entry.js';
+import { EXIT, LeeboardError } from '../src/errors.js';
+import { purgeCommand, type PurgeFlags } from '../src/purge.js';
+import { initStore, scopeDir, writeEntry } from '../src/store.js';
 import { lb, sampleEntry, tempDir } from './helpers.js';
 
 const ME = { LEEBOARD_HARNESS: 'claude-code', LEEBOARD_SESSION: 'S1' };
@@ -22,6 +26,130 @@ function entryPath(home: string, scope: string, id: string): string {
 function logLines(home: string): { id: string; event: string; status: string }[] {
   return readFileSync(join(home, 'log.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
 }
+
+describe('purge command results', () => {
+  function world(): Ctx {
+    const home = tempDir();
+    initStore(home);
+    return { home, cwd: tempDir(), now: new Date('2026-10-18T10:00:00Z'),
+      identity: { harness: 'claude-code', session: 'S1', origin: 'user-stated' } };
+  }
+
+  it.each([
+    { json: false, dryRun: false }, { json: true, dryRun: false },
+    { json: false, dryRun: true }, { json: true, dryRun: true },
+  ])('owns id-based output and effects (%j)', (flags) => {
+    const ctx = world();
+    const entry = createEntry(ctx, { kind: 'rule', title: 'Remove me', scope: 'global' });
+    const path = entryPath(ctx.home, 'global', entry.id);
+    const bytes = readFileSync(path);
+    const logPath = join(ctx.home, 'log.jsonl');
+    const log = readFileSync(logPath, 'utf8');
+    const resolve = vi.fn(() => ctx);
+    expect(purgeCommand(resolve, [entry.id], flags)).toEqual({
+      code: 0, stderr: '',
+      stdout: flags.json
+        ? JSON.stringify({ dryRun: flags.dryRun, purged: [summarize(entry)], kept: [] }) + '\n'
+        : `${flags.dryRun ? 'would purge' : 'purged'} 1 entry\n- [${entry.id}] active global: Remove me\n`,
+    });
+    expect(resolve).toHaveBeenCalledTimes(1);
+    if (flags.dryRun) {
+      expect(readFileSync(path)).toEqual(bytes);
+      expect(readFileSync(logPath, 'utf8')).toBe(log);
+    } else {
+      expect(existsSync(path)).toBe(false);
+      const lines = logLines(ctx.home);
+      expect(lines).toHaveLength(2);
+      expect(lines[1]).toMatchObject({ id: entry.id, event: 'purged', status: 'active' });
+      expect(readFileSync(logPath, 'utf8').startsWith(log)).toBe(true);
+    }
+  });
+
+  it.each([false, true])('selects closed entries with default and zero days (json=%s)', (json) => {
+    for (const days of [undefined, '0']) {
+      const ctx = world();
+      const old = sampleEntry({ id: 'rule-old-0001', title: 'Old', status: 'revoked', updated: '2026-09-01T10:00:00Z' });
+      const recent = sampleEntry({ id: 'rule-recent-0002', title: 'Recent', status: 'revoked', updated: '2026-10-17T10:00:00Z' });
+      const active = sampleEntry({ id: 'rule-active-0003' });
+      for (const entry of [old, recent, active]) writeEntry(ctx.home, entry);
+      const chosen = days === undefined ? [old] : [old, recent];
+      expect(purgeCommand(() => ctx, [], { closed: true, days, json })).toEqual({
+        code: 0, stderr: '', stdout: json
+          ? JSON.stringify({ dryRun: false, purged: chosen.map(summarize), kept: [] }) + '\n'
+          : `purged ${chosen.length} ${chosen.length === 1 ? 'entry' : 'entries'}\n` +
+            chosen.map((entry) => `- [${entry.id}] revoked global: ${entry.title}\n`).join(''),
+      });
+      expect(existsSync(entryPath(ctx.home, 'global', old.id))).toBe(false);
+      expect(existsSync(entryPath(ctx.home, 'global', recent.id))).toBe(days === undefined);
+      expect(existsSync(entryPath(ctx.home, 'global', active.id))).toBe(true);
+      expect(logLines(ctx.home).map(({ id, event }) => ({ id, event }))).toEqual(
+        chosen.map(({ id }) => ({ id, event: 'purged' })),
+      );
+    }
+  });
+
+  it.each([
+    { json: false, days: undefined }, { json: true, days: undefined },
+    { json: false, days: '0' }, { json: true, days: '0' },
+  ])('selects closed entries with default retention or explicit zero (%j)', ({ json, days }) => {
+    const ctx = world();
+    const old = sampleEntry({ id: 'rule-old-0001', title: 'Old', status: 'revoked', updated: '2026-09-01T10:00:00Z' });
+    const recent = sampleEntry({ id: 'rule-recent-0002', title: 'Recent', status: 'revoked', updated: '2026-10-17T10:00:00Z' });
+    const active = sampleEntry({ id: 'rule-active-0003', title: 'Active' });
+    for (const entry of [old, recent, active]) writeEntry(ctx.home, entry);
+    const chosen = days === undefined ? [old] : [old, recent];
+    const text = `purged ${chosen.length} ${chosen.length === 1 ? 'entry' : 'entries'}\n` +
+      chosen.map((entry) => `- [${entry.id}] revoked global: ${entry.title}\n`).join('');
+    expect(purgeCommand(() => ctx, [], { closed: true, days, json })).toEqual({
+      code: 0, stdout: json ? JSON.stringify({ dryRun: false, purged: chosen.map(summarize), kept: [] }) + '\n' : text, stderr: '',
+    });
+    expect(existsSync(entryPath(ctx.home, 'global', old.id))).toBe(false);
+    expect(existsSync(entryPath(ctx.home, 'global', recent.id))).toBe(days === undefined);
+    expect(existsSync(entryPath(ctx.home, 'global', active.id))).toBe(true);
+    expect(logLines(ctx.home).map(({ id, event }) => ({ id, event }))).toEqual(chosen.map(({ id }) => ({ id, event: 'purged' })));
+  });
+
+  it.each([false, true])('returns the nonempty zero-selection result (json=%s)', (json) => {
+    const ctx = world();
+    expect(purgeCommand(() => ctx, [], { closed: true, json })).toEqual({
+      code: 0, stdout: json ? '{"dryRun":false,"purged":[],"kept":[]}\n' : 'purged 0 entries\n', stderr: '',
+    });
+  });
+
+  const usage = 'usage: lb purge <id>... | lb purge --closed [--days <n>]';
+  const badDays = '--days must be a whole number of days, 0 or more';
+  const invalid: { ids: string[]; flags: PurgeFlags; args: string[]; message: string }[] = [
+    { ids: [], flags: {}, args: [], message: usage },
+    { ids: ['some-id'], flags: { closed: true }, args: ['some-id', '--closed'], message: usage },
+    { ids: ['some-id'], flags: { days: '3' }, args: ['some-id', '--days', '3'], message: '--days goes with --closed' },
+    { ids: [], flags: { days: '3' }, args: ['--days', '3'], message: usage },
+    ...['x', '-1', '1.5', 'Infinity'].map((days) => ({
+      ids: [], flags: { closed: true, days }, args: ['--closed', `--days=${days}`], message: badDays,
+    })),
+  ];
+
+  it.each(invalid)('validates before context resolution: $args', async ({ ids, flags, args, message }) => {
+    const resolve = vi.fn(() => { throw new Error('identity must not be resolved'); });
+    expect(() => purgeCommand(resolve, ids, flags)).toThrow(LeeboardError);
+    expect(() => purgeCommand(resolve, ids, flags)).toThrow(expect.objectContaining({ message, exitCode: EXIT.USAGE }));
+    expect(resolve).not.toHaveBeenCalled();
+    expect(await lb(tempDir(), ['purge', ...args], { env: ME })).toEqual({ code: 1, out: '', err: `lb: ${message}\n` });
+  });
+
+  it('preserves purge flag errors before identity errors, but resolves identity for valid flags', async () => {
+    const ctx = world();
+    const entry = createEntry(ctx, { kind: 'rule', title: 'Keep me' });
+    const log = readFileSync(join(ctx.home, 'log.jsonl'));
+    expect(await lb(ctx.home, ['purge', '--harness', 'nobody'])).toEqual({
+      code: 1, out: '', err: `lb: ${usage}\n`,
+    });
+    expect(await lb(ctx.home, ['purge', entry.id, '--harness', 'nobody'])).toEqual({
+      code: 1, out: '', err: "lb: unknown harness 'nobody' (use claude-code, pi, helmraiser, funkyoctopus, bosun, user)\n",
+    });
+    expect(existsSync(entryPath(ctx.home, entry.scope, entry.id))).toBe(true);
+    expect(readFileSync(join(ctx.home, 'log.jsonl'))).toEqual(log);
+  });
+});
 
 describe('lb purge <id>', () => {
   it('removes the entry file and its revisions, and logs one purged line', async () => {

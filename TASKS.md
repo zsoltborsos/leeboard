@@ -17,8 +17,9 @@ keeping a history; `CURRENT_STATE.md` and git record what landed.
 
 From the 25 Nov architecture review; explore before committing to them.
 
-- Command modules: `check`, `review` and `delta` are converted and own their exit codes,
-  JSON shapes and rendered output, using `src/result.ts`. `run.ts` retains option parsing, usage
-  text, routing and thrown-error mapping for them. The remaining commands follow.
+- Command modules: `check`, `review`, `delta` and `purge` are converted and own their
+  exit codes, JSON shapes and rendered output, using `src/result.ts`. `run.ts` retains
+  option parsing, usage text, routing and thrown-error mapping for them. The remaining
+  commands follow.
 - Project registry: one module owns the `projects/<name>/` layout and the
   `project:<name>` scope string; rename and remove become its operations.
