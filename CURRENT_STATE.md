@@ -22,7 +22,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   precede identity resolution; creation aliases share one create command. `src/run.ts`
   retains parsing, help/version, identity and
   clock context, routing and thrown-error mapping. `src/result.ts` supplies `RunResult`,
-  `result`, `ok` and `jsonLine`; command usage errors share `usageError` in `src/errors.ts`.
+  `result`, `ok` and `jsonLine`; all command usage errors use `usageError` in
+  `src/errors.ts`, including invalid usage-report cutoffs.
   Entry writes and `init` live in `src/commands/write.ts`, with one field mapping for
   creation and revision; projects live in `src/commands/project.ts`. Both modules load
   only on their routes, never for brief/delta/check. Bosun lazily loads its full-pass

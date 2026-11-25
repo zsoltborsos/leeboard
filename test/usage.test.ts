@@ -352,9 +352,13 @@ describe('usage command results', () => {
     expect(readFileSync(usagePath(home))).toEqual(before);
   });
 
-  it('preserves the exact cutoff error and creates no state for a missing log', () => {
+  it('preserves the exact cutoff error and creates no state for a missing log', async () => {
     const home = tempDir();
-    expect(() => usageCommand(home, { since: 'invalid' })).toThrow("invalid --since 'invalid' (use an ISO date or timestamp with timezone)");
+    const message = "invalid --since 'invalid' (use an ISO date or timestamp with timezone)";
+    expect(() => usageCommand(home, { since: 'invalid' })).toThrow(expect.objectContaining({
+      name: 'LeeboardError', message, exitCode: EXIT.USAGE,
+    }));
+    expect(await lb(home, ['usage', '--since', 'invalid'])).toEqual({ code: 1, out: '', err: `lb: ${message}\n` });
     expect(usageCommand(home, { json: true })).toEqual({ code: 0, stdout: JSON.stringify(usage(home)) + '\n', stderr: '' });
     expect(existsSync(join(home, 'state'))).toBe(false);
   });

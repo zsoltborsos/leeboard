@@ -1,4 +1,4 @@
-import { EXIT, LeeboardError } from '../errors.js';
+import { usageError } from '../errors.js';
 import { jsonLine, ok, type RunResult } from '../result.js';
 import { readUsage, summarizeUsage, type Metric, type UsageReport } from '../usage.js';
 
@@ -31,7 +31,7 @@ function parseSince(value: string | undefined): Date | null {
     Number.isNaN(calendar.getTime()) ||
     calendar.toISOString().slice(0, 10) !== day
   ) {
-    throw new LeeboardError(`invalid --since '${value}' (use an ISO date or timestamp with timezone)`, EXIT.USAGE);
+    throw usageError(`invalid --since '${value}' (use an ISO date or timestamp with timezone)`);
   }
   return date;
 }
