@@ -78,6 +78,35 @@ describe('successor-aware show CLI', () => {
     });
   });
 
+  it('reports a lapsed endpoint for direct and multihop chains without writing entries or the log', async () => {
+    const home = tempDir();
+    expect((await lb(home, ['init'])).code).toBe(0);
+    const middle = { ...b, status: 'superseded' as const };
+    const end = sampleEntry({ id: 'rule-c-0003', title: 'Lapsed replacement', supersedes: [b.id], until: '2000-01-01' });
+    const entries = [a, middle, end];
+    for (const entry of entries) writeEntry(home, entry);
+    const paths = [...entries.map((entry) => join(scopeDir(home, entry.scope), `${entry.id}.md`)), join(home, 'log.jsonl')];
+    const bytes = paths.map((path) => readFileSync(path));
+    for (const [old, direct] of [[a, middle], [middle, end]]) {
+      const text = serializeEntry(old);
+      const expected = {
+        ...old, supersededBy: [direct.id], current: null, chainEnd: { id: end.id, status: 'lapsed' },
+      };
+      expect(await lb(home, ['show', old.id])).toEqual({ code: 0, err: '', out: text + (text.endsWith('\n') ? '' : '\n') +
+        `Superseded by: ${direct.id} — ${direct.title}\nCurrent: none — chain ends at ${end.id} (lapsed)\n` });
+      expect(JSON.parse((await lb(home, ['show', old.id, '--json'])).out)).toEqual(expected);
+      expect(showCommand(context(home, new Date('2000-01-01T23:59:59.999Z')), old.id).data).toEqual({
+        ...expected, current: end.id, chainEnd: { id: end.id, status: 'active' },
+      });
+      expect(showCommand(context(home, new Date('2000-01-02T00:00:00Z')), old.id).data).toEqual(expected);
+    }
+    expect(await lb(home, ['list', '--json'])).toEqual({ code: 0, err: '', out: '[]\n' });
+    expect(JSON.parse((await lb(home, ['list', '--status', 'lapsed', '--json'])).out)).toEqual(listCommand(context(home), { status: 'lapsed' }));
+    expect(listCommand(context(home), { status: 'lapsed' }).map((entry) => entry.id)).toEqual([end.id]);
+    expect(paths.map((path) => readFileSync(path))).toEqual(bytes);
+    expect(readFileSync(paths[2], 'utf8')).toMatch(/^status: active$/m);
+  });
+
   it('names every direct successor', async () => {
     const home = tempDir();
     const other = sampleEntry({ id: 'rule-c-0003', title: 'Other replacement', supersedes: [a.id] });
