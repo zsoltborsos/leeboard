@@ -71,17 +71,18 @@ describe('purge command results', () => {
   ])('selects closed entries with default retention or explicit zero (%j)', ({ json, days }) => {
     const ctx = world();
     const old = sampleEntry({ id: 'rule-old-0001', title: 'Old', status: 'revoked', updated: '2026-09-01T10:00:00Z' });
-    const recent = sampleEntry({ id: 'rule-recent-0002', title: 'Recent', status: 'revoked', updated: '2026-10-17T10:00:00Z' });
+    // Global is scanned before machine, independently of directory enumeration order.
+    const recent = sampleEntry({ id: 'rule-recent-0002', scope: 'machine', title: 'Recent', status: 'revoked', updated: '2026-10-17T10:00:00Z' });
     const active = sampleEntry({ id: 'rule-active-0003', title: 'Active' });
     for (const entry of [old, recent, active]) writeEntry(ctx.home, entry);
     const chosen = days === undefined ? [old] : [old, recent];
     const text = `purged ${chosen.length} ${chosen.length === 1 ? 'entry' : 'entries'}\n` +
-      chosen.map((entry) => `- [${entry.id}] revoked global: ${entry.title}\n`).join('');
+      chosen.map((entry) => `- [${entry.id}] revoked ${entry.scope}: ${entry.title}\n`).join('');
     expect(purgeCommand(() => ctx, [], { closed: true, days, json })).toEqual({
       code: 0, stdout: json ? JSON.stringify({ dryRun: false, purged: chosen.map(summarize), kept: [] }) + '\n' : text, stderr: '',
     });
     expect(existsSync(entryPath(ctx.home, 'global', old.id))).toBe(false);
-    expect(existsSync(entryPath(ctx.home, 'global', recent.id))).toBe(days === undefined);
+    expect(existsSync(entryPath(ctx.home, 'machine', recent.id))).toBe(days === undefined);
     expect(existsSync(entryPath(ctx.home, 'global', active.id))).toBe(true);
     expect(logLines(ctx.home).map(({ id, event }) => ({ id, event }))).toEqual(chosen.map(({ id }) => ({ id, event: 'purged' })));
   });

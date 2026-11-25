@@ -4,5 +4,6 @@ export interface RunResult {
   stderr: string;
 }
 
-export const ok = (stdout = ''): RunResult => ({ code: 0, stdout, stderr: '' });
-export const json = (data: unknown): string => JSON.stringify(data) + '\n';
+export const result = (code: number, stdout: string): RunResult => ({ code, stdout, stderr: '' });
+export const ok = (stdout = ''): RunResult => result(0, stdout);
+export const jsonLine = (data: unknown): string => JSON.stringify(data) + '\n';

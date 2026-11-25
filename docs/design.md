@@ -272,11 +272,14 @@ may not run it.
 
 ## 7. CLI
 
-Internally, `check`, `review`, `delta` and `purge` command modules own their finished
-`RunResult` (exit code, stdout and stderr), using the shared type and output helpers in
-`src/result.ts`. `src/run.ts` parses options, routes these calls and maps thrown errors
-to exit codes. Review's lightweight data query remains separate for brief's digest;
-delta only builds a successor index when included superseded items need it.
+Internally, `check`, `review`, `delta` and `purge` command entry points own their finished
+`RunResult` (exit code, stdout and stderr). They use `<name>Command(ctx, flags)`, with
+`json` in the flags object; purge also takes ids separately and keeps a lazy context
+thunk so flag validation precedes identity resolution. `src/result.ts` supplies
+`RunResult`, `result(code, stdout)`, `ok(stdout)` and `jsonLine(data)`. `src/run.ts`
+parses options, routes these calls and maps thrown errors to exit codes. `reviewDetails`
+returns successor-enriched data; brief's digest keeps using lightweight `review()`.
+Delta only builds a successor index when included superseded items need it.
 
 Every command accepts `--json`. Identity comes from flags or environment:
 `--harness` / `LEEBOARD_HARNESS`, `--session` / `LEEBOARD_SESSION`, and `--origin`

@@ -152,7 +152,7 @@ describe('check', () => {
 describe('check command output', () => {
   it.each([false, true])('returns exact clear output (json=%s)', (json) => {
     const { ctx } = world();
-    expect(checkCommand(ctx, 'push', json))
+    expect(checkCommand(ctx, { tag: 'push', json }))
       .toEqual({ code: 0, stdout: json ? '[]\n' : '', stderr: '' });
   });
 
@@ -163,7 +163,7 @@ describe('check command output', () => {
       id: hold.id, kind: 'hold', scope: 'project:alpha', status: 'active', title: 'Freeze',
       author: ctx.identity, created: hold.created, updated: hold.updated, release: 'told', blocks: ['push'],
     }];
-    expect(checkCommand(ctx, 'push', json))
+    expect(checkCommand(ctx, { tag: 'push', json }))
       .toEqual({ code: 3, stdout: json ? JSON.stringify(expected) + '\n' : `- [${hold.id}] Freeze — release: told — blocks: push\n`, stderr: '' });
   });
 
@@ -178,7 +178,7 @@ describe('check command output', () => {
       title: `Unreadable hold file: ${path} — could not be parsed: entry has no frontmatter`,
       release: 'fix or remove this file', unreadable: true,
     }];
-    expect(checkCommand(ctx, 'push', json))
+    expect(checkCommand(ctx, { tag: 'push', json }))
       .toEqual({ code: 3, stdout: json ? JSON.stringify(expected) + '\n' : `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`, stderr: '' });
   });
 
@@ -202,7 +202,7 @@ describe('check command output', () => {
     ];
     const text = `- [${hold.id}] Freeze — release: told — blocks: push\n` +
       `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`;
-    expect(checkCommand(ctx, 'push', json))
+    expect(checkCommand(ctx, { tag: 'push', json }))
       .toEqual({ code: 3, stdout: json ? JSON.stringify(expected) + '\n' : text, stderr: '' });
   });
 });

@@ -2,7 +2,7 @@ import type { Ctx } from '../context.js';
 import { isActive, type Kind, type Origin, type RevisionBefore, type Status } from '../entry.js';
 import { latestChanges, type LogLine, readLogSince, readReviewCursor, writeReviewCursor } from '../log.js';
 import { createSuccessorResolver, listEntries, readRevision } from '../store.js';
-import { json, ok, type RunResult } from '../result.js';
+import { jsonLine, ok, type RunResult } from '../result.js';
 
 export interface ReviewItem {
   id: string;
@@ -84,7 +84,7 @@ export function review(ctx: Ctx, options: { peek?: boolean; details?: boolean } 
 }
 
 /** CLI details and successor enrichment; brief intentionally uses lightweight review() instead. */
-export function reviewCommand(ctx: Ctx, options: { peek?: boolean } = {}): ReviewData {
+export function reviewDetails(ctx: Ctx, options: { peek?: boolean } = {}): ReviewData {
   const data = review(ctx, { peek: options.peek, details: true });
   let resolveSuccessor: ReturnType<typeof createSuccessorResolver> | undefined;
   for (const group of [data.new, data.changed, data.closed]) {
@@ -100,10 +100,10 @@ export function reviewCommand(ctx: Ctx, options: { peek?: boolean } = {}): Revie
 }
 
 /** Own the CLI's empty-output rule, rendering and public JSON shape. */
-export function runReviewCommand(ctx: Ctx, options: { peek?: boolean; json?: boolean } = {}): RunResult {
-  const data = reviewCommand(ctx, { peek: options.peek });
+export function reviewCommand(ctx: Ctx, flags: { peek?: boolean; json?: boolean }): RunResult {
+  const data = reviewDetails(ctx, { peek: flags.peek });
   const text = renderReview(data);
-  return ok(text === '' ? '' : options.json ? json({
+  return ok(text === '' ? '' : flags.json ? jsonLine({
     new: data.new.map(({ current, ...item }) => item),
     changed: data.changed.map(({ current, ...item }) => item),
     closed: data.closed.map(({ current, ...item }) => item),

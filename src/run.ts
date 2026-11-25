@@ -7,7 +7,7 @@ import { checkCommand } from './commands/check.js';
 import { deltaCommand } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
-import { runReviewCommand } from './commands/review.js';
+import { reviewCommand } from './commands/review.js';
 import { ackHandoff, closeRequest, createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
 import type { Ctx } from './context.js';
 import { type Entry, summarize } from './entry.js';
@@ -18,7 +18,7 @@ import { renameProject } from './project-rename.js';
 import { addProject, listProjects, type Project } from './projects.js';
 import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './purge.js';
 import { initStore, resolveHome } from './store.js';
-import { json, ok, type RunResult } from './result.js';
+import { jsonLine, ok, type RunResult } from './result.js';
 
 const USAGE = `Usage: lb <command> [options]
 
@@ -139,7 +139,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     identity: resolveIdentity(values, env),
   });
   const arg = (index: number, name: string): string => args[index] ?? fail(`usage: lb ${command} <${name}>`);
-  const showEntrySummary = (entry: Entry): RunResult => ok(values.json ? json(summarize(entry)) : renderList([summarize(entry)]));
+  const showEntrySummary = (entry: Entry): RunResult => ok(values.json ? jsonLine(summarize(entry)) : renderList([summarize(entry)]));
   const newEntry = (kind: string): RunResult =>
     showEntrySummary(
       createEntry(ctx(), {
@@ -158,7 +158,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
   switch (command) {
     case 'init':
       initStore(home);
-      return ok(values.json ? json({ home }) : `initialised ${home}\n`);
+      return ok(values.json ? jsonLine({ home }) : `initialised ${home}\n`);
     case 'add':
       return newEntry(arg(0, 'kind'));
     case 'hold':
@@ -198,7 +198,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
 
     case 'show': {
       const { data, text } = showCommand(readCtx, arg(0, 'id'));
-      return ok(values.json ? json(data) : text);
+      return ok(values.json ? jsonLine(data) : text);
     }
     case 'list': {
       const items = listCommand(readCtx, {
@@ -209,11 +209,11 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
         harness: values.harness,
         all: values.all,
       });
-      return ok(values.json ? json(items) : renderList(items));
+      return ok(values.json ? jsonLine(items) : renderList(items));
     }
     case 'search': {
       const items = searchEntries(readCtx, args.join(' '), { all: values.all });
-      return ok(values.json ? json(items) : renderList(items));
+      return ok(values.json ? jsonLine(items) : renderList(items));
     }
     case 'purge':
       return purgeCommand(ctx, args, {
@@ -225,17 +225,17 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
 
     case 'brief': {
       const { data, text } = briefCommand(ctx());
-      return ok(values.json ? json(data) : text);
+      return ok(values.json ? jsonLine(data) : text);
     }
     case 'delta':
-      return deltaCommand(ctx(), values.json);
+      return deltaCommand(ctx(), { json: values.json });
     case 'review':
-      return runReviewCommand(ctx(), { peek: values.peek, json: values.json });
+      return reviewCommand(ctx(), { peek: values.peek, json: values.json });
     case 'check':
-      return checkCommand(ctx(), values.blocks ?? '', values.json);
+      return checkCommand(ctx(), { tag: values.blocks ?? '', json: values.json });
     case 'usage': {
       const report = usageReport(home, values.since);
-      return ok(values.json ? json(report) : renderUsage(report));
+      return ok(values.json ? jsonLine(report) : renderUsage(report));
     }
     case 'bosun': {
       if (values.full) {
@@ -256,7 +256,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
         );
       }
       const report = bosun(ctx(), { dryRun: values['dry-run'] });
-      return ok(values.json ? json(report) : renderBosun(report));
+      return ok(values.json ? jsonLine(report) : renderBosun(report));
     }
 
     case 'project':
@@ -283,23 +283,23 @@ function project(
         paths: values.path ?? [],
         remotes: values.remote,
       });
-      return ok(values.json ? json(added) : describe(added));
+      return ok(values.json ? jsonLine(added) : describe(added));
     }
     case 'rename': {
       const [from, to] = [args[1], args[2]];
       if (!from || !to || (values.path?.length ?? 0) > 1) fail('usage: lb project rename <old> <new> [--path <dir>]');
       const renamed = renameProject(ctx(), from!, to!, values.path?.[0]);
-      return ok(values.json ? json(renamed) : describe(renamed));
+      return ok(values.json ? jsonLine(renamed) : describe(renamed));
     }
     case 'remove': {
       if (!args[1] || args.length > 2) fail('usage: lb project remove <name> [--path <dir>]...');
       const result = removeProject(ctx(), args[1]!, values.path);
-      if (values.json) return ok(json(result));
+      if (values.json) return ok(jsonLine(result));
       return ok('removed' in result ? `removed project ${result.removed}\n` : `dropped ${result.droppedPaths.length} path(s)\n${describe(result.project)}`);
     }
     case 'list': {
       const projects = listProjects(home);
-      return ok(values.json ? json(projects) : projects.map(describe).join(''));
+      return ok(values.json ? jsonLine(projects) : projects.map(describe).join(''));
     }
     default:
       throw usage('usage: lb project add|rename|remove|list');

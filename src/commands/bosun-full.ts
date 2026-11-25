@@ -9,7 +9,7 @@ import type { Ctx } from '../context.js';
 import { timestamp } from '../entry.js';
 import { EXIT, LeeboardError } from '../errors.js';
 import { logSize, readLogSince } from '../log.js';
-import { json, ok, type RunResult } from '../result.js';
+import { jsonLine, ok, type RunResult } from '../result.js';
 import { listEntries, writeFileAtomic } from '../store.js';
 import { bosun, type BosunReport, renderBosun } from './bosun.js';
 
@@ -127,7 +127,7 @@ export async function bosunFullCommand({ home, ctx, env, cwd }: FullContext, fla
     const gate = fullPassNeeded(home, memoryRoot);
     if (!gate.needed) {
       const report = bosun(ctx());
-      const stdout = flags.json ? json({ skipped: true, reason: gate.reason, quick: report }) : `Bosun full pass skipped: ${gate.reason}\n${renderBosun(report)}`;
+      const stdout = flags.json ? jsonLine({ skipped: true, reason: gate.reason, quick: report }) : `Bosun full pass skipped: ${gate.reason}\n${renderBosun(report)}`;
       return ok(stdout);
     }
   }
@@ -141,7 +141,7 @@ export async function bosunFullCommand({ home, ctx, env, cwd }: FullContext, fla
   });
   return {
     code: result.clean ? 0 : 1,
-    stdout: flags.json ? json(result) : renderFull(result),
+    stdout: flags.json ? jsonLine(result) : renderFull(result),
     stderr: result.clean ? '' : `lb: bosun --full did not finish cleanly; see ${result.dir}\n`,
   };
 }

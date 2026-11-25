@@ -5,7 +5,7 @@ import { type Entry, entryIdsIn, summarize, type Summary } from './entry.js';
 import { EXIT, LeeboardError } from './errors.js';
 import { logChange } from './log.js';
 import { requirePermission } from './policy.js';
-import { json, ok, type RunResult } from './result.js';
+import { jsonLine, ok, type RunResult } from './result.js';
 import { findEntry, listEntries, scopeDir, withRevisionLock, writeEntry } from './store.js';
 
 /** How long `lb purge --closed` keeps a closed entry, counted from its last change. */
@@ -29,14 +29,14 @@ export interface PurgeFlags {
   json?: boolean;
 }
 
-/** Validate before resolving identity, then own the CLI result. */
-export function purgeCommand(ctx: () => Ctx, ids: string[], flags: PurgeFlags = {}): RunResult {
+/** Lazy ctx keeps flag validation ahead of identity resolution. */
+export function purgeCommand(ctx: () => Ctx, ids: string[], flags: PurgeFlags): RunResult {
   if (Boolean(flags.closed) === (ids.length > 0)) throw new LeeboardError('usage: lb purge <id>... | lb purge --closed [--days <n>]', EXIT.USAGE);
   if (flags.days !== undefined && !flags.closed) throw new LeeboardError('--days goes with --closed', EXIT.USAGE);
   const days = flags.days === undefined ? KEEP_CLOSED_DAYS : Number(flags.days);
   if (!Number.isInteger(days) || days < 0) throw new LeeboardError('--days must be a whole number of days, 0 or more', EXIT.USAGE);
   const result = purgeEntries(ctx(), flags.closed ? { closed: true, days } : { ids }, { dryRun: flags.dryRun });
-  return ok(flags.json ? json(result) : renderPurge(result));
+  return ok(flags.json ? jsonLine(result) : renderPurge(result));
 }
 
 /**

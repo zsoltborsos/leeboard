@@ -204,7 +204,7 @@ describe('brief and check recording', () => {
     const { home, repo } = projectWorld();
     const ctx = ctxFor(home, repo);
 
-    const clear = checkCommand(ctx, 'deploy', true);
+    const clear = checkCommand(ctx, { tag: 'deploy', json: true });
     expect(clear.code).toBe(0);
     expect(clear.stderr).toBe('');
     expect(JSON.parse(clear.stdout)).toEqual([]);
@@ -212,7 +212,7 @@ describe('brief and check recording', () => {
     expect(readUsage(home)[0]).toMatchObject({ command: 'check', tag: 'deploy', blocked: false, project: 'P' });
 
     const hold = createEntry(ctx, { kind: 'hold', title: 'No deploys', release: 'r', blocks: ['deploy'] });
-    const blocked = checkCommand(ctx, 'deploy', true);
+    const blocked = checkCommand(ctx, { tag: 'deploy', json: true });
     expect(blocked.code).toBe(3);
     expect(blocked.stderr).toBe('');
     expect(JSON.parse(blocked.stdout)).toEqual([expect.objectContaining({ id: hold.id })]);
@@ -220,7 +220,7 @@ describe('brief and check recording', () => {
     expect(records).toHaveLength(2);
     expect(records[1]).toMatchObject({ command: 'check', tag: 'deploy', blocked: true });
 
-    const otherTag = checkCommand(ctx, 'helmraiser-run', true);
+    const otherTag = checkCommand(ctx, { tag: 'helmraiser-run', json: true });
     expect(otherTag.code).toBe(0);
     expect(otherTag.stderr).toBe('');
     expect(JSON.parse(otherTag.stdout)).toEqual([]);
@@ -233,7 +233,7 @@ describe('brief and check recording', () => {
     mkdirSync(dir, { recursive: true });
     const path = join(dir, 'hold-broken.md');
     writeFileSync(path, 'broken');
-    const result = checkCommand(ctxFor(home, repo), 'push', true);
+    const result = checkCommand(ctxFor(home, repo), { tag: 'push', json: true });
     expect(result.code).toBe(3);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toEqual([{
@@ -246,9 +246,9 @@ describe('brief and check recording', () => {
 
   it('still rejects a blank tag, without recording', () => {
     const { home, repo } = projectWorld();
-    expect(() => checkCommand(ctxFor(home, repo), ' ', false)).toThrow(LeeboardError);
+    expect(() => checkCommand(ctxFor(home, repo), { tag: ' ', json: false })).toThrow(LeeboardError);
     try {
-      checkCommand(ctxFor(home, repo), '', false);
+      checkCommand(ctxFor(home, repo), { tag: '', json: false });
     } catch (error) {
       expect((error as LeeboardError).exitCode).toBe(EXIT.USAGE);
     }
@@ -261,12 +261,12 @@ describe('brief and check recording', () => {
     createEntry(ctx, { kind: 'hold', title: 'No deploys', release: 'r', blocks: ['deploy'] });
 
     const firstBrief = briefCommand(ctx);
-    const firstCheck = checkCommand(ctx, 'deploy', false);
+    const firstCheck = checkCommand(ctx, { tag: 'deploy', json: false });
     rmSync(join(home, 'state', 'usage.jsonl'), { force: true });
     mkdirSync(join(home, 'state', 'usage.jsonl'), { recursive: true });
 
     const secondBrief = briefCommand(ctx);
-    const secondCheck = checkCommand(ctx, 'deploy', false);
+    const secondCheck = checkCommand(ctx, { tag: 'deploy', json: false });
     expect(secondBrief.data).toEqual(firstBrief.data);
     expect(secondBrief.text).toEqual(firstBrief.text);
     expect(secondCheck).toEqual(firstCheck);

@@ -18,7 +18,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   supersede chains ending at lapsed entries have no current replacement.
   `lb --version` / `lb -v` prints the installed package version.
 - **Command modules.** `check`, `review`, `delta` and `purge` own their finished command
-  results; `src/result.ts` supplies the shared `RunResult` type and output helpers.
+  results through flags-object interfaces; `src/result.ts` supplies `RunResult`,
+  `result`, `ok` and `jsonLine`. Review's enriched query is `reviewDetails`.
   Remaining commands follow.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide

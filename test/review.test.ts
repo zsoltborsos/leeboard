@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from '../src/change.js';
 import { brief } from '../src/commands/brief.js';
 import { delta } from '../src/commands/delta.js';
-import { renderReview, renderReviewDigest, review, reviewCommand, reviewCounts, runReviewCommand } from '../src/commands/review.js';
+import { renderReview, renderReviewDigest, review, reviewCommand, reviewCounts, reviewDetails } from '../src/commands/review.js';
 import type { Ctx } from '../src/context.js';
 import { type Status } from '../src/entry.js';
 import { appendLog, logChange, logSize, readCursor, readReviewCursor, writeReviewCursor } from '../src/log.js';
@@ -57,18 +57,18 @@ describe('review command results', () => {
       `## Changed\n- [${changed.id}] rule global: Revised (claude-code/abcdefgh, user-stated)\n  was: Original\n\n` +
       `## Closed\n- [${old.id}] rule global: Old (claude-code/abcdefgh, user-stated) → ${current.id}\n`;
     const expected = { code: 0, stdout: json ? JSON.stringify(expectedJson) + '\n' : expectedText, stderr: '' };
-    expect(runReviewCommand(B, { peek: true, json })).toEqual(expected);
+    expect(reviewCommand(B, { peek: true, json })).toEqual(expected);
     expect(readReviewCursor(home)).toBe(cursor);
-    expect(runReviewCommand(B, { json })).toEqual(expected);
+    expect(reviewCommand(B, { json })).toEqual(expected);
     expect(readReviewCursor(home)).toBe(logSize(home));
-    expect(runReviewCommand(B, { json })).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(reviewCommand(B, { json })).toEqual({ code: 0, stdout: '', stderr: '' });
   });
 
   it.each([false, true])('prints nothing for an empty store, even JSON (json=%s)', (json) => {
     const { home, B } = world();
-    expect(runReviewCommand(B, { peek: true, json })).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(reviewCommand(B, { peek: true, json })).toEqual({ code: 0, stdout: '', stderr: '' });
     expect(readReviewCursor(home)).toBe(0);
-    expect(runReviewCommand(B, { json })).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(reviewCommand(B, { json })).toEqual({ code: 0, stdout: '', stderr: '' });
     expect(readReviewCursor(home)).toBe(logSize(home));
   });
 });
@@ -86,7 +86,7 @@ describe('successor-aware owner review', () => {
       target = current.id;
     } else if (mode === 'revoked') revokeEntry(A, next.id, 'No longer applies');
     const cursor = readReviewCursor(home);
-    const data = reviewCommand(B, { peek: true });
+    const data = reviewDetails(B, { peek: true });
     expect(readReviewCursor(home)).toBe(cursor);
     expect(data.closed).toEqual([]);
     expect(data.new.find((item) => item.id === old.id)).toMatchObject({
@@ -97,9 +97,9 @@ describe('successor-aware owner review', () => {
     const result = await lb(home, ['review', '--peek']);
     expect(result).toEqual({ code: 0, out: renderReview(data), err: '' });
     expect(readReviewCursor(home)).toBe(cursor);
-    expect(reviewCommand(B)).toEqual(data);
+    expect(reviewDetails(B)).toEqual(data);
     expect(readReviewCursor(home)).toBe(logSize(home));
-    expect(reviewCommand(B)).toEqual(empty);
+    expect(reviewDetails(B)).toEqual(empty);
   });
 
   it.each(['direct', 'chain'] as const)('uses the review clock for a %s endpoint without reclassifying stored statuses', (mode) => {
@@ -114,8 +114,8 @@ describe('successor-aware owner review', () => {
     const paths = [...entries.map((entry) => join(scopeDir(home, entry.scope), `${entry.id}.md`)), join(home, 'log.jsonl')];
     const bytes = paths.map((path) => readFileSync(path));
     const cursor = readReviewCursor(home);
-    const before = reviewCommand(B, { peek: true });
-    const after = reviewCommand({ ...B, now: new Date(B.now.getTime() + 86_400_000) }, { peek: true });
+    const before = reviewDetails(B, { peek: true });
+    const after = reviewDetails({ ...B, now: new Date(B.now.getTime() + 86_400_000) }, { peek: true });
     expect(before.new.find((item) => item.id === old.id)).toMatchObject({
       status: 'superseded', supersededBy: [next.id], current: end.id,
     });
@@ -140,7 +140,7 @@ describe('successor-aware owner review', () => {
     reviseEntry(A, old.id, { title: 'Final', body: 'Final body' });
     const next = createEntry(A, { kind: 'rule', title: 'Replacement' });
     supersedeEntry(A, old.id, next.id);
-    const data = reviewCommand(B, { peek: true });
+    const data = reviewDetails(B, { peek: true });
     expect(data.closed[0]).toMatchObject({
       id: old.id, supersededBy: [next.id], current: next.id,
       before: { title: old.title, body: old.body, scope: old.scope },
@@ -170,7 +170,7 @@ describe('successor-aware owner review', () => {
     }
     writeEntry(home, old);
     logChange(A, old, 'created');
-    const data = reviewCommand(B, { peek: true });
+    const data = reviewDetails(B, { peek: true });
     expect(data.new[0]).toMatchObject({ supersededBy: mode === 'missing' ? [] : ['rule-next-0002'], current: null });
     expect(renderReview(data)).toBe(`## New\n- [${old.id}] rule global: Orphan (claude-code/A, agent-inferred)${mode === 'missing' ? '' : ' → rule-next-0002'}\n`);
     const result = await lb(home, ['review', '--peek', '--json']);
@@ -193,7 +193,7 @@ describe('successor-aware owner review', () => {
       expect(resolve).not.toHaveBeenCalled();
       expect(readReviewCursor(home)).toBe(0);
       scan.mockClear();
-      const data = reviewCommand(B, { peek: true });
+      const data = reviewDetails(B, { peek: true });
       expect(data.new.filter((item) => item.supersededBy)).toHaveLength(2);
       expect(resolve).toHaveBeenCalledTimes(1);
       expect(resolve).toHaveBeenCalledWith(expect.any(Array), B.now);
@@ -207,7 +207,7 @@ describe('successor-aware owner review', () => {
     const light = review(B, { peek: true });
     const resolve = vi.spyOn(store, 'createSuccessorResolver');
     try {
-      const full = reviewCommand(B, { peek: true });
+      const full = reviewDetails(B, { peek: true });
       expect(full).toEqual(light);
       expect(renderReview(full)).toBe(renderReview(light));
       expect(reviewCounts(full)).toEqual({ new: 1, changed: 0, closed: 0 });
