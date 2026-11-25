@@ -2,6 +2,7 @@ import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Ctx } from './context.js';
 import { EXIT, LeeboardError } from './errors.js';
+import { requirePermission } from './policy.js';
 import { listProjects, type Project } from './projects.js';
 import { formatFrontmatter } from './entry.js';
 import { listEntries, withRevisionLock, writeFileAtomic } from './store.js';
@@ -14,10 +15,7 @@ export type RemoveResult = { removed: string } | { project: Project; droppedPath
  * it: purge or move those first, so nothing is left without a folder. Owner's call, as purge.
  */
 export function removeProject(ctx: Ctx, name: string, paths: string[] = []): RemoveResult {
-  const harness = ctx.identity.harness;
-  if (harness === 'bosun' || harness === 'helmraiser') {
-    throw new LeeboardError(`${harness} may not remove projects; ask the owner or an interactive session`, EXIT.NOT_PERMITTED);
-  }
+  requirePermission(ctx.identity, { action: 'project-remove' });
   const usage = (message: string): never => {
     throw new LeeboardError(message, EXIT.USAGE);
   };
