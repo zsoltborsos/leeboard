@@ -277,8 +277,9 @@ Internally, every command entry point in `src/commands/` owns its finished `RunR
 option parsing, shared usage text, identity and clock context, routing, help/version,
 and thrown-error mapping. Commands that validate before resolving identity take a
 lazy context thunk. Entry writes and `init` live in `src/commands/write.ts`; creation
-and revision share one flag-to-field mapping. Bosun's command loads its full-pass
-module lazily, only for `--full`, keeping runner code off the brief/delta/check hot path.
+and revision share one flag-to-field mapping. Write and project command modules load
+only on their respective routes, not on the brief/delta/check hot path. Bosun's command
+loads its full-pass module lazily, only for `--full`, keeping runner code off that path.
 `src/result.ts` supplies `RunResult`, `result(code, stdout)`, `ok(stdout)` and
 `jsonLine(data)`. Shared `usageError(message)` in `src/errors.ts` constructs usage
 errors. Purge's command and help description live in `src/commands/purge.ts`;

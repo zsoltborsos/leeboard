@@ -5,16 +5,10 @@ import { briefCommand } from './commands/brief.js';
 import { bosunCommand } from './commands/bosun.js';
 import { checkCommand } from './commands/check.js';
 import { deltaCommand } from './commands/delta.js';
-import { projectCommand } from './commands/project.js';
 import { purgeCommand, PURGE_CLOSED_DESCRIPTION } from './commands/purge.js';
 import { listCommand, type ReadCtx, searchCommand, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
 import { usageCommand } from './commands/usage.js';
-import {
-  ackCommand, addCommand, closeCommand, grantCommand, handoffCommand, holdCommand,
-  initCommand, releaseCommand, replyCommand, requestCommand, reviseCommand, revokeCommand,
-  supersedeCommand,
-} from './commands/write.js';
 import type { Ctx } from './context.js';
 import { EXIT, LeeboardError, usageError } from './errors.js';
 import { resolveIdentity } from './identity.js';
@@ -140,32 +134,32 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
 
   switch (command) {
     case 'init':
-      return initCommand(home, values);
+      return (await import('./commands/write.js')).initCommand(home, values);
     case 'add':
-      return addCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).addCommand(ctx, args[0], values);
     case 'hold':
-      return holdCommand(ctx, values);
+      return (await import('./commands/write.js')).holdCommand(ctx, values);
     case 'grant':
-      return grantCommand(ctx, values);
+      return (await import('./commands/write.js')).grantCommand(ctx, values);
     case 'handoff':
-      return handoffCommand(ctx, values);
+      return (await import('./commands/write.js')).handoffCommand(ctx, values);
     case 'request':
-      return requestCommand(ctx, values);
+      return (await import('./commands/write.js')).requestCommand(ctx, values);
 
     case 'revise':
-      return reviseCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).reviseCommand(ctx, args[0], values);
     case 'release':
-      return releaseCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).releaseCommand(ctx, args[0], values);
     case 'ack':
-      return ackCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).ackCommand(ctx, args[0], values);
     case 'close':
-      return closeCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).closeCommand(ctx, args[0], values);
     case 'reply':
-      return replyCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).replyCommand(ctx, args[0], values);
     case 'revoke':
-      return revokeCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).revokeCommand(ctx, args[0], values);
     case 'supersede':
-      return supersedeCommand(ctx, args[0], values);
+      return (await import('./commands/write.js')).supersedeCommand(ctx, args[0], values);
 
     case 'show':
       return showCommand(readCtx, args[0], values);
@@ -206,7 +200,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       });
 
     case 'project':
-      return projectCommand(home, args, values, ctx);
+      return (await import('./commands/project.js')).projectCommand(home, args, values, ctx);
     default:
       throw usageError(`unknown command '${command}' (try --help)`);
   }

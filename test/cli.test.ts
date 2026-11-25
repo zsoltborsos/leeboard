@@ -826,6 +826,43 @@ describe('the built CLI (spawned)', () => {
     return { code: run.status ?? -1, out: run.stdout, err: run.stderr };
   }
 
+  it.each([
+    [['brief'], []],
+    [['delta'], []],
+    [['check', '--blocks', 'push'], []],
+    [['init'], ['write.js']],
+    [['project', 'list'], ['project.js']],
+  ])('loads new command modules only on their routes: %j', (args, expectedModules) => {
+    const script = `
+      import { registerHooks } from 'node:module';
+      import { pathToFileURL } from 'node:url';
+      const loaded = [];
+      registerHooks({ load(url, context, nextLoad) {
+        loaded.push(url);
+        return nextLoad(url, context);
+      } });
+      const { run } = await import(new URL('./run.js', pathToFileURL(process.argv[1])));
+      const result = await run(process.argv.slice(2), process.env, process.cwd());
+      console.log(JSON.stringify({ result, loaded }));
+    `;
+    const child = spawnSync(process.execPath, ['--input-type=module', '-e', script, CLI, ...args], {
+      cwd: tempDir('lb-cwd-'),
+      env: { ...process.env, LEEBOARD_HOME: tempDir('lb-home-') },
+      encoding: 'utf8',
+    });
+    expect(child.status).toBe(0);
+    expect(child.stderr).toBe('');
+    const { result, loaded } = JSON.parse(child.stdout) as { result: { code: number; stderr: string }; loaded: string[] };
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(loaded.some((url) => url.endsWith('/run.js'))).toBe(true);
+    const commandModules = loaded
+      .filter((url) => /\/commands\/(?:project|write)\.js$/.test(url))
+      .map((url) => url.split('/').at(-1))
+      .sort();
+    expect(commandModules).toEqual(expectedModules);
+  });
+
   it.each(['--version', '-v'])('prints the installed version from an unrelated cwd: %s', (flag) => {
     const { version } = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),

@@ -22,8 +22,9 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   clock context, routing and thrown-error mapping. `src/result.ts` supplies `RunResult`,
   `result`, `ok` and `jsonLine`; command usage errors share `usageError` in `src/errors.ts`.
   Entry writes and `init` live in `src/commands/write.ts`, with one field mapping for
-  creation and revision; projects live in `src/commands/project.ts`. Bosun lazily loads
-  its full-pass module only for `--full`. Review's enriched query is `reviewDetails`;
+  creation and revision; projects live in `src/commands/project.ts`. Both modules load
+  only on their routes, never for brief/delta/check. Bosun lazily loads its full-pass
+  module only for `--full`. Review's enriched query is `reviewDetails`;
   purge's command remains separate from its store operation.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
@@ -59,7 +60,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 npm run build && npm test && npm run test:future && npm run typecheck
 ```
 
-Build, typecheck and all 1,612 tests pass after the command-module migration; the
-future-clock suite passes (1,610 tests, 2 skipped). The router-shape and CLI smoke
+Build, typecheck and all 1,617 tests pass after the command-module migration, including
+cold-process checks of route-only module loading; the future-clock suite passes
+(1,615 tests, 2 skipped). The router-shape and CLI smoke
 acceptance checks also pass. `LEEBOARD_PERF=1 npm test` runs the opt-in timing tests;
 they were not rerun for this refactor.
