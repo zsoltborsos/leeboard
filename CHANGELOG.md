@@ -18,6 +18,7 @@ First public release.
 - `lb` (also installed as `leeboard`): `init`, `add`, `hold`, `grant`, `handoff`,
   `request`, `release`, `ack`, `reply`, `close`, `revoke`, `supersede`, `revise`, `show`,
   `list`, `search`, and `project add|rename|remove|list`. Every command accepts `--json`.
+  Ids may be given as a unique prefix or as their four-character hash.
 - `lb --version` (alias `-v`) prints the installed package version.
 - `lb brief`, a session-start orientation of at most 8,000 characters, and `lb delta`,
   what other sessions changed since this session's brief.

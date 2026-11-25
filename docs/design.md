@@ -103,7 +103,8 @@ Required: `id`, `kind`, `scope`, `status`, `title`, `created`, `updated`. Option
 | `supersedes` | any | Ids this entry replaces |
 
 Ids are `<kind>-<slug of the title, up to 40 characters>-<4 hex digits>`. The kind prefix
-lets a scan select files by name alone. Every command accepts a unique prefix of an id.
+lets a scan select files by name alone. Every command accepts a unique prefix of an id,
+or its four-character hash when no id starts with it.
 
 `author.harness` is one of `claude-code`, `pi`, `helmraiser`, `funkyoctopus`, `bosun`,
 `user`, or null. `author.origin` is `user-stated` (the owner's own words),

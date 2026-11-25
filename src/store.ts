@@ -336,7 +336,11 @@ export function findEntry(home: string, idPrefix: string): Entry {
     entryFiles(home, scope).map((file) => ({ scope, id: file.slice(0, -'.md'.length) })),
   );
   const exact = candidates.filter((candidate) => candidate.id === idPrefix);
-  const matches = exact.length > 0 ? exact : candidates.filter((candidate) => candidate.id.startsWith(idPrefix));
+  let matches = exact.length > 0 ? exact : candidates.filter((candidate) => candidate.id.startsWith(idPrefix));
+  // Sessions quote an entry by its four-character hash, the id's last segment.
+  if (matches.length === 0 && /^[0-9a-f]{4}$/.test(idPrefix)) {
+    matches = candidates.filter((candidate) => candidate.id.endsWith(`-${idPrefix}`));
+  }
   if (matches.length === 0) throw new LeeboardError(`no entry matches '${idPrefix}'`, EXIT.UNKNOWN_ID);
   if (matches.length > 1) {
     const ids = matches.map((match) => match.id).sort();

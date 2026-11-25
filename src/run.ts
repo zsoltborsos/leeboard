@@ -53,7 +53,7 @@ and list every status unless --status is given.
 Targets (--to): project:<name>, session:<id>, harness:<name>, any.
 Identity: --harness --session --origin, or LEEBOARD_HARNESS / LEEBOARD_SESSION.
 Store: LEEBOARD_HOME (default ~/.leeboard). Every command accepts --json.
-Ids may be abbreviated to a unique prefix.
+Ids may be abbreviated to a unique prefix, or to their four-character hash.
 Exit codes: 0 success, 1 usage, 2 credential rejection, 3 check blocked, 4 unknown/ambiguous id, 5 disallowed transition, 6 not permitted.
 `;
 

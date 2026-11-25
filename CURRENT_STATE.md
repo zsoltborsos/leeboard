@@ -48,4 +48,4 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 npm run build && npm test && npm run typecheck
 ```
 
-752 tests pass in 29 files. `LEEBOARD_PERF=1 npm test` also runs the opt-in timing tests.
+The suite passes. `LEEBOARD_PERF=1 npm test` also runs the opt-in timing tests.

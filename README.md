@@ -130,7 +130,7 @@ Branch checkout-refactor; payment step done, tests red in the cart module.
 EOF
 
 lb brief --cwd ~/code/webshop     # what a session sees at start
-lb show <id>                      # read one entry (a unique id prefix is enough)
+lb show <id>                      # read one entry (a unique id prefix or the 4-character hash)
 lb list --status lapsed           # active on disk, but past their until date
 lb search pipefail                # find active entries (--all adds closed and lapsed ones)
 lb delta --session "$SESSION_ID"  # what other sessions changed since your brief

@@ -65,7 +65,7 @@ the librarian, resolves conflicts in favour of `user-stated`.
 
 ## Changing entries
 
-Read before you change: `lb show <id>` (ids accept a unique prefix).
+Read before you change: `lb show <id>` (ids accept a unique prefix or their four-character hash).
 
 - Fix wording, scope or kind-specific fields in place: `lb revise <id> --title "…"`
   (or `--body`, `--scope`, `--until`, `--release`, `--blocks`, `--holder`, `--to`).

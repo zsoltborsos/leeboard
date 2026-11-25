@@ -370,6 +370,17 @@ describe('findEntry', () => {
     expect(error.message).not.toContain('rule-pipefail-5e6f');
   });
 
+  it('finds an entry by its four-character hash suffix when no id starts with it', () => {
+    const home = storeWithEntries();
+    expect(findEntry(home, '3c4d').id).toBe('hold-no-pushes-3c4d');
+    writeEntry(home, sampleEntry({ id: 'rule-other-3c4d' }));
+    const error = failure(() => findEntry(home, '3c4d'));
+    expect(error.exitCode).toBe(EXIT.UNKNOWN_ID);
+    expect(error.message).toContain('hold-no-pushes-3c4d');
+    expect(error.message).toContain('rule-other-3c4d');
+    expect(failure(() => findEntry(home, 'c4d')).exitCode).toBe(EXIT.UNKNOWN_ID);
+  });
+
   it('refuses an unknown id with exit 4', () => {
     const error = failure(() => findEntry(storeWithEntries(), 'grant-'));
     expect(error.exitCode).toBe(EXIT.UNKNOWN_ID);
