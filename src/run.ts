@@ -6,7 +6,7 @@ import { bosun, renderBosun } from './commands/bosun.js';
 import { checkCommand } from './commands/check.js';
 import { deltaCommand } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
-import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
+import { listCommand, type ReadCtx, searchCommand, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
 import { ackCommand, addCommand, closeCommand, grantCommand, handoffCommand, holdCommand, initCommand, releaseCommand, replyCommand, requestCommand, reviseCommand, revokeCommand, supersedeCommand } from './commands/write.js';
 import type { Ctx } from './context.js';
@@ -133,7 +133,6 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     cwd: values.cwd ? resolve(values.cwd) : cwd,
     identity: resolveIdentity(values, env),
   });
-  const arg = (index: number, name: string): string => args[index] ?? fail(`usage: lb ${command} <${name}>`);
 
   switch (command) {
     case 'init':
@@ -164,25 +163,12 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     case 'supersede':
       return supersedeCommand(ctx, args[0], values);
 
-    case 'show': {
-      const { data, text } = showCommand(readCtx, arg(0, 'id'));
-      return ok(values.json ? jsonLine(data) : text);
-    }
-    case 'list': {
-      const items = listCommand(readCtx, {
-        kind: values.kind,
-        scope: values.scope,
-        status: values.status,
-        session: values.session,
-        harness: values.harness,
-        all: values.all,
-      });
-      return ok(values.json ? jsonLine(items) : renderList(items));
-    }
-    case 'search': {
-      const items = searchEntries(readCtx, args.join(' '), { all: values.all });
-      return ok(values.json ? jsonLine(items) : renderList(items));
-    }
+    case 'show':
+      return showCommand(readCtx, args[0], values);
+    case 'list':
+      return listCommand(readCtx, values);
+    case 'search':
+      return searchCommand(readCtx, args.join(' '), values);
     case 'purge':
       return purgeCommand(ctx, args, {
         closed: values.closed,
@@ -232,9 +218,5 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     default:
       throw usageError(`unknown command '${command}' (try --help)`);
   }
-}
-
-function fail(message: string): never {
-  throw usageError(message);
 }
 

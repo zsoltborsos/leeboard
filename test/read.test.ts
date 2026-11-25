@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { listCommand, renderList, searchEntries, showCommand, showEntry } from '../src/commands/read.js';
+import { listCommand as listResult, renderList, searchCommand, showCommand, showEntry, type ReadSummary, type ShowData } from '../src/commands/read.js';
+import type { RunResult } from '../src/result.js';
 import { parseEntry, serializeEntry } from '../src/entry.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
 import { scopeDir, writeEntry } from '../src/store.js';
@@ -9,6 +10,21 @@ import { lb, sampleEntry, tempDir } from './helpers.js';
 
 function context(home: string, now = new Date('2026-10-17T12:00:00Z')) {
   return { home, now };
+}
+
+function jsonData<T>(result: RunResult): T {
+  expect(result.code).toBe(0);
+  expect(result.stderr).toBe('');
+  return JSON.parse(result.stdout) as T;
+}
+
+/** Keep data assertions readable while checking the finished command result each time. */
+function listCommand(...[ctx, flags]: Parameters<typeof listResult>): ReadSummary[] {
+  return jsonData<ReadSummary[]>(listResult(ctx, { ...flags, json: true }));
+}
+
+function searchEntries(...[ctx, text, flags]: Parameters<typeof searchCommand>): ReadSummary[] {
+  return jsonData<ReadSummary[]>(searchCommand(ctx, text, { ...flags, json: true }));
 }
 
 function failure(fn: () => unknown): LeeboardError {
@@ -51,6 +67,10 @@ describe('show', () => {
         expect(await lb(home, [...args, ...flags], { env })).toEqual(expected);
       }
     }
+  });
+
+  it('requires an id before lookup', () => {
+    expect(failure(() => showCommand(context(tempDir()), undefined)).message).toBe('usage: lb show <id>');
   });
 
   it('exits 4 for an unknown id', () => {
@@ -110,10 +130,10 @@ describe('successor-aware show CLI', () => {
       expect(await lb(home, ['show', old.id])).toEqual({ code: 0, err: '', out: text + (text.endsWith('\n') ? '' : '\n') +
         `Superseded by: ${direct.id} — ${direct.title}\nCurrent: none — chain ends at ${end.id} (lapsed)\n` });
       expect(JSON.parse((await lb(home, ['show', old.id, '--json'])).out)).toEqual(expected);
-      expect(showCommand(context(home, new Date('2000-01-01T23:59:59.999Z')), old.id).data).toEqual({
+      expect(jsonData<ShowData>(showCommand(context(home, new Date('2000-01-01T23:59:59.999Z')), old.id, { json: true }))).toEqual({
         ...expected, current: end.id, chainEnd: { id: end.id, status: 'active' },
       });
-      expect(showCommand(context(home, new Date('2000-01-02T00:00:00Z')), old.id).data).toEqual(expected);
+      expect(jsonData<ShowData>(showCommand(context(home, new Date('2000-01-02T00:00:00Z')), old.id, { json: true }))).toEqual(expected);
     }
     expect(await lb(home, ['list', '--json'])).toEqual({ code: 0, err: '', out: '[]\n' });
     expect(JSON.parse((await lb(home, ['list', '--status', 'lapsed', '--json'])).out)).toEqual(listCommand(context(home), { status: 'lapsed' }));
@@ -225,9 +245,9 @@ describe('list', () => {
   });
 
   it('renders one line per entry, and nothing for none', () => {
-    expect(renderList(listCommand(context(store()), { kind: 'hold', all: true }))).toBe(
-      '- [hold-tunnel-0002] active project:alpha: Tunnel is open\n' + '- [hold-old-0003] released project:alpha: Old hold\n',
-    );
+    const expected = '- [hold-tunnel-0002] active project:alpha: Tunnel is open\n' + '- [hold-old-0003] released project:alpha: Old hold\n';
+    expect(listResult(context(store()), { kind: 'hold', all: true })).toEqual({ code: 0, stdout: expected, stderr: '' });
+    expect(renderList(listCommand(context(store()), { kind: 'hold', all: true }))).toBe(expected);
     expect(renderList([])).toBe('');
   });
 });
@@ -241,6 +261,12 @@ describe('search', () => {
     expect(searchEntries(context(home), 'old hold', { all: true }).map((e) => e.id)).toEqual(['hold-old-0003']);
     expect(searchEntries(context(home), '/var/log').map((e) => e.id)).toEqual(['reference-logs-0004']);
     expect(searchEntries(context(home), 'zzz')).toEqual([]);
+  });
+
+  it('returns finished text results, including empty output', () => {
+    const ctx = context(store());
+    expect(searchCommand(ctx, 'PIPEFAIL')).toEqual({ code: 0, stderr: '', stdout: '- [rule-pipefail-0001] active global: Set pipefail before committing\n' });
+    expect(searchCommand(ctx, 'zzz')).toEqual({ code: 0, stderr: '', stdout: '' });
   });
 
   it('needs something to search for', () => {
@@ -281,7 +307,7 @@ describe('lapsed reads', () => {
       expect(listCommand(context(home), { status }).map((e) => e.id)).toEqual(entries.filter((e) => e.status === status).map((e) => e.id));
     }
     expect(listCommand(context(home), { session: 'A', status: 'active' }).map((e) => e.id)).toEqual(active);
-    expect(renderList(listCommand(context(home), { all: true }))).toContain('lapsed global: Sample');
+    expect(listResult(context(home), { all: true }).stdout).toContain('lapsed global: Sample');
     expect(failure(() => listCommand(context(home), { all: true, status: 'lapsed' })).exitCode).toBe(EXIT.USAGE);
   });
 
@@ -311,7 +337,7 @@ describe('lapsed reads', () => {
       expect(JSON.parse(result.out)).toEqual(listCommand(context(home), { status: 'lapsed' }));
     }
     for (const args of [['list', '--all'], ['search', 'sample', '--all']]) {
-      expect(await lb(home, args)).toEqual({ code: 0, err: '', out: renderList(listCommand(context(home), { all: true })) });
+      expect(await lb(home, args)).toEqual({ code: 0, err: '', out: `- [${entry.id}] lapsed global: Sample\n` });
     }
     expect(await lb(home, ['show', entry.id])).toEqual({
       code: 0, err: '', out: serializeEntry(entry).replace(/^status: active$/m, 'status: lapsed'),
@@ -341,9 +367,9 @@ describe('lapsed reads', () => {
     expect(listCommand(ctx, { status }).map((e) => e.id)).toEqual([entry.id]);
     expect(listCommand(ctx, { status: status === 'active' ? 'lapsed' : 'active' })).toEqual([]);
     expect(searchEntries(ctx, 'sample', { all: true }).map((e) => e.status)).toEqual([status]);
+    expect(jsonData<ShowData>(showCommand(ctx, entry.id, { json: true }))).toEqual({ ...entry, status });
     expect(showCommand(ctx, entry.id)).toEqual({
-      data: { ...entry, status },
-      text: serializeEntry(entry).replace(/^status: active$/m, `status: ${status}`),
+      code: 0, stderr: '', stdout: serializeEntry(entry).replace(/^status: active$/m, `status: ${status}`),
     });
   });
 });

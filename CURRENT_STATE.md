@@ -24,7 +24,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   command usage errors use `usageError` in `src/errors.ts`. Entry writes and `init` now
   return finished results from `src/commands/write.ts`, sharing one field mapping for
   creation and revision. `project` owns its validation and results in
-  `src/commands/project.ts`; remaining read and report commands follow.
+  `src/commands/project.ts`. `show`, `list` and `search` return finished results from
+  `src/commands/read.ts`; remaining brief, usage and Bosun reports follow.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).
