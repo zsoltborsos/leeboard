@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EXIT, LeeboardError } from '../src/errors.js';
 import { addProject, listProjects, normalizeRemote, resolveProject } from '../src/projects.js';
@@ -31,6 +31,33 @@ remotes: [git@github.com:acme/api.git]
     expect(listProjects(home)).toEqual([
       { name: 'api', paths: ['/work/api', '/other/clone'], remotes: ['https://x.test/a/b'] },
     ]);
+  });
+
+  it('ignores legacy aliases on read and omits them on the next write', () => {
+    const home = tempDir();
+    addProject(home, { name: 'api', paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] });
+    const file = join(home, 'projects', 'api', 'project.md');
+    const legacy = `---
+name: api
+aliases: [sg]
+paths: [/work/api]
+remotes: [git@github.com:acme/api.git]
+---
+`;
+    writeFileSync(file, legacy);
+    expect(listProjects(home)).toEqual([
+      { name: 'api', paths: ['/work/api'], remotes: ['git@github.com:acme/api.git'] },
+    ]);
+    expect(readFileSync(file, 'utf8')).toBe(legacy);
+    const expected = { name: 'api', paths: ['/work/api', '/other/clone'], remotes: ['git@github.com:acme/api.git'] };
+    expect(addProject(home, { name: 'api', paths: ['/other/clone'] })).toEqual(expected);
+    expect(listProjects(home)).toEqual([expected]);
+    expect(readFileSync(file, 'utf8')).toBe(`---
+name: api
+paths: [/work/api, /other/clone]
+remotes: [git@github.com:acme/api.git]
+---
+`);
   });
 
   it('lists projects by name', () => {
