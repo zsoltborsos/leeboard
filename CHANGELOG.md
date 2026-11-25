@@ -19,6 +19,8 @@ First public release.
   `request`, `release`, `ack`, `reply`, `close`, `revoke`, `supersede`, `revise`, `show`,
   `list`, `search`, and `project add|rename|remove|list`. Every command accepts `--json`.
   Ids may be given as a unique prefix or as their four-character hash.
+- `lb project rename` is refused to Bosun and Helmraiser (exit 6), before any entries or
+  project metadata are changed.
 - Identity falls back to `CLAUDE_CODE_SESSION_ID` (`claude-code`) or `PI_SESSION_ID`
   (`pi`) when neither flags nor `LEEBOARD_HARNESS`/`LEEBOARD_SESSION` give one.
 - `lb --version` (alias `-v`) prints the installed package version.

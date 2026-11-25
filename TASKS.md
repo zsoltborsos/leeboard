@@ -8,11 +8,6 @@ keeping a history; `CURRENT_STATE.md` and git record what landed.
 - Upload `docs/brand/leeboard-social.png` as the repository's social preview
   (Settings → General; the API cannot set it).
 
-- Actor policy: one module says which harness may take which action. Today
-  `change.ts` (`requirePermission`), `purge.ts` and `project-remove.ts` each check,
-  `project-rename.ts` does not, and `brief.ts` has its own harness list for the owner
-  digest.
-
 ## Later
 
 From the 25 Nov architecture review; explore before committing to them.

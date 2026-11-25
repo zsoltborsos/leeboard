@@ -191,10 +191,11 @@ agents that write freely still never delete.
 
 | Actor | Restriction |
 |---|---|
-| Unattended runner (`helmraiser`) | Cannot purge (exit 6). Cannot create a hold or grant (exit 6). Cannot release, revoke, supersede or revise a hold or grant. May revoke, supersede or revise another entry only if its own session wrote it. May write handoffs and requests, ack, reply and close. |
-| Bosun | Cannot revoke a `user-stated` entry (exit 6). It may revise or supersede one while preserving the owner's meaning, or flag it in its report. Cannot purge (exit 6). |
+| Unattended runner (`helmraiser`) | Cannot purge, remove projects or rename projects (exit 6). Cannot create a hold or grant (exit 6). Cannot release, revoke, supersede or revise a hold or grant. May revoke, supersede or revise another entry only if its own session wrote it. May write handoffs and requests, ack, reply and close. |
+| Bosun | Cannot revoke a `user-stated` entry (exit 6). It may revise or supersede one while preserving the owner's meaning, or flag it in its report. Cannot purge, remove projects or rename projects (exit 6). |
 | Everyone else | None beyond the entry's own state (section 4.1). |
 
+Actor permissions are implemented in [`src/policy.ts`](../src/policy.ts).
 Unattended workers run without a person to check a hold or grant, so they do not place
 them. An interactive session or the owner does.
 
@@ -262,7 +263,8 @@ adds paths and remotes to an existing one (`--path` is required every time).
 `lb project rename <old> <new> [--path <dir>]` renames the project folder, rewrites `scope: project:<old>` and
 `to: project:<old>` on every entry whatever its status, and makes `--path` the first
 path. Ids, bodies and timestamps do not change. It is safe to run again after an
-interruption. `lb project remove <name>` deletes the project folder from the registry; it
+interruption. Bosun and Helmraiser may not run rename (exit 6, before any writes).
+`lb project remove <name>` deletes the project folder from the registry; it
 is refused while any entry, of any status, is scoped to the project or an active entry is
 addressed to it, so purge or move those first. With `--path <dir>`… it drops only those
 paths and keeps at least one. Like purge, it is the owner's call: Bosun and Helmraiser

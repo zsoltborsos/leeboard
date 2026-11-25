@@ -25,6 +25,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   and for ids an active entry still cites (`docs/design.md` section 4.1).
   `lb project remove <name>` unregisters a project with no entries left; `--path` drops
   stale paths.
+- **Actor policy.** Permissions live in `src/policy.ts`; project rename, like purge
+  and project remove, is refused to Bosun and Helmraiser before writes.
 - **Delivery.** `brief` (at most 8,000 characters), `delta` and `check` are on the hot
   path: no network, no LLM, only `git` as a subprocess. `check` exits 3 for a blocking
   hold, and for an unparseable hold file in scope.
