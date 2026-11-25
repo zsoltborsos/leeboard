@@ -65,29 +65,6 @@ describe('purge command results', () => {
     }
   });
 
-  it.each([false, true])('selects closed entries with default and zero days (json=%s)', (json) => {
-    for (const days of [undefined, '0']) {
-      const ctx = world();
-      const old = sampleEntry({ id: 'rule-old-0001', title: 'Old', status: 'revoked', updated: '2026-09-01T10:00:00Z' });
-      const recent = sampleEntry({ id: 'rule-recent-0002', title: 'Recent', status: 'revoked', updated: '2026-10-17T10:00:00Z' });
-      const active = sampleEntry({ id: 'rule-active-0003' });
-      for (const entry of [old, recent, active]) writeEntry(ctx.home, entry);
-      const chosen = days === undefined ? [old] : [old, recent];
-      expect(purgeCommand(() => ctx, [], { closed: true, days, json })).toEqual({
-        code: 0, stderr: '', stdout: json
-          ? JSON.stringify({ dryRun: false, purged: chosen.map(summarize), kept: [] }) + '\n'
-          : `purged ${chosen.length} ${chosen.length === 1 ? 'entry' : 'entries'}\n` +
-            chosen.map((entry) => `- [${entry.id}] revoked global: ${entry.title}\n`).join(''),
-      });
-      expect(existsSync(entryPath(ctx.home, 'global', old.id))).toBe(false);
-      expect(existsSync(entryPath(ctx.home, 'global', recent.id))).toBe(days === undefined);
-      expect(existsSync(entryPath(ctx.home, 'global', active.id))).toBe(true);
-      expect(logLines(ctx.home).map(({ id, event }) => ({ id, event }))).toEqual(
-        chosen.map(({ id }) => ({ id, event: 'purged' })),
-      );
-    }
-  });
-
   it.each([
     { json: false, days: undefined }, { json: true, days: undefined },
     { json: false, days: '0' }, { json: true, days: '0' },

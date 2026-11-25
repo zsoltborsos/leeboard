@@ -52,10 +52,11 @@ describe('delta command results', () => {
 
   it.each([false, true])('indexes only once when command delivery needs successors (json=%s)', (json) => {
     const { home, A, B } = world();
-    deltaCommand(B, json);
     const scan = vi.spyOn(store, 'listEntries');
     const resolve = vi.spyOn(store, 'createSuccessorResolver');
     try {
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+      expect(readCursor(home, 'B')).toBe(logSize(home));
       expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
       const ordinary = createEntry(A, { kind: 'rule', title: 'Ordinary' });
       expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: json ? JSON.stringify([{
@@ -86,29 +87,6 @@ describe('delta command results', () => {
     expect(existsSync(join(home, 'state'))).toBe(false);
   });
 
-  it.each([false, true])('indexes only once and only for delivered superseded items (json=%s)', (json) => {
-    const { home, A, B } = world();
-    const scan = vi.spyOn(store, 'listEntries');
-    const resolve = vi.spyOn(store, 'createSuccessorResolver');
-    try {
-      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
-      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
-      const ordinary = createEntry(A, { kind: 'rule', title: 'Ordinary' });
-      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: json ? JSON.stringify([{
-        id: ordinary.id, kind: 'rule', scope: 'project:alpha', event: 'created', status: 'active', title: 'Ordinary',
-      }]) + '\n' : `- [${ordinary.id}] rule created: Ordinary\n`, stderr: '' });
-      expect(scan).not.toHaveBeenCalled();
-      expect(resolve).not.toHaveBeenCalled();
-      const first = createEntry(A, { kind: 'rule', title: 'First' });
-      const second = createEntry(A, { kind: 'rule', title: 'Second' });
-      const next = createEntry(A, { kind: 'rule', title: 'Merged', scope: 'project:beta' });
-      supersedeEntry(A, first.id, next.id);
-      supersedeEntry(A, second.id, next.id);
-      expect(deltaCommand(B, json).code).toBe(0);
-      expect(scan).toHaveBeenCalledExactlyOnceWith(home);
-      expect(resolve).toHaveBeenCalledExactlyOnceWith(expect.any(Array), B.now);
-    } finally { scan.mockRestore(); resolve.mockRestore(); }
-  });
 });
 
 describe('successor-aware delta', () => {
