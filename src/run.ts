@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { briefCommand } from './commands/brief.js';
 import { bosun, renderBosun } from './commands/bosun.js';
-import { checkCommand, renderCheck } from './commands/check.js';
+import { checkCommand } from './commands/check.js';
 import { delta, renderDelta } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
@@ -248,24 +248,8 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
         closed: data.closed.map(({ current, ...item }) => item),
       }) : text);
     }
-    case 'check': {
-      const { holds, unreadable } = checkCommand(ctx(), values.blocks ?? '');
-      const blocked = holds.length > 0 || unreadable.length > 0;
-      return {
-        code: blocked ? EXIT.CHECK_BLOCKED : 0,
-        stdout: values.json ? json([
-          ...holds,
-          ...unreadable.map(({ path, error }) => ({
-            id: basename(path, '.md'),
-            kind: 'hold',
-            title: `Unreadable hold file: ${path} — could not be parsed: ${error.replace(/\s+/g, ' ').trim()}`,
-            release: 'fix or remove this file',
-            unreadable: true,
-          })),
-        ]) : renderCheck(holds, unreadable),
-        stderr: '',
-      };
-    }
+    case 'check':
+      return checkCommand(ctx(), values.blocks ?? '', values.json);
     case 'usage': {
       const report = usageReport(home, values.since);
       return ok(values.json ? json(report) : renderUsage(report));

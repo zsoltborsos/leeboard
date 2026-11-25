@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { check, renderCheck } from '../src/commands/check.js';
+import { check, checkCommand, renderCheck } from '../src/commands/check.js';
 import { createEntry, releaseHold } from '../src/change.js';
 import type { Ctx } from '../src/context.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
@@ -150,25 +150,25 @@ describe('check', () => {
 });
 
 describe('check command output', () => {
-  it.each([false, true])('returns exact clear output (json=%s)', async (json) => {
-    const { home, repo } = world();
-    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
-      .toEqual({ code: 0, out: json ? '[]\n' : '', err: '' });
+  it.each([false, true])('returns exact clear output (json=%s)', (json) => {
+    const { ctx } = world();
+    expect(checkCommand(ctx, 'push', json))
+      .toEqual({ code: 0, stdout: json ? '[]\n' : '', stderr: '' });
   });
 
-  it.each([false, true])('returns exact blocked output (json=%s)', async (json) => {
-    const { ctx, home, repo } = world();
+  it.each([false, true])('returns exact blocked output (json=%s)', (json) => {
+    const { ctx } = world();
     const hold = createEntry(ctx, { kind: 'hold', title: 'Freeze', release: 'told', blocks: ['push'] });
     const expected = [{
       id: hold.id, kind: 'hold', scope: 'project:alpha', status: 'active', title: 'Freeze',
       author: ctx.identity, created: hold.created, updated: hold.updated, release: 'told', blocks: ['push'],
     }];
-    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
-      .toEqual({ code: 3, out: json ? JSON.stringify(expected) + '\n' : `- [${hold.id}] Freeze — release: told — blocks: push\n`, err: '' });
+    expect(checkCommand(ctx, 'push', json))
+      .toEqual({ code: 3, stdout: json ? JSON.stringify(expected) + '\n' : `- [${hold.id}] Freeze — release: told — blocks: push\n`, stderr: '' });
   });
 
-  it.each([false, true])('returns exact unreadable-only output (json=%s)', async (json) => {
-    const { home, repo } = world();
+  it.each([false, true])('returns exact unreadable-only output (json=%s)', (json) => {
+    const { ctx, home } = world();
     const dir = scopeDir(home, 'project:alpha');
     mkdirSync(dir, { recursive: true });
     const path = join(dir, 'hold-broken.md');
@@ -178,12 +178,12 @@ describe('check command output', () => {
       title: `Unreadable hold file: ${path} — could not be parsed: entry has no frontmatter`,
       release: 'fix or remove this file', unreadable: true,
     }];
-    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
-      .toEqual({ code: 3, out: json ? JSON.stringify(expected) + '\n' : `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`, err: '' });
+    expect(checkCommand(ctx, 'push', json))
+      .toEqual({ code: 3, stdout: json ? JSON.stringify(expected) + '\n' : `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`, stderr: '' });
   });
 
-  it.each([false, true])('returns holds before unreadable files exactly (json=%s)', async (json) => {
-    const { ctx, home, repo } = world();
+  it.each([false, true])('returns holds before unreadable files exactly (json=%s)', (json) => {
+    const { ctx, home } = world();
     const hold = createEntry(ctx, { kind: 'hold', title: 'Freeze', release: 'told', blocks: ['push'] });
     const dir = scopeDir(home, 'project:alpha');
     mkdirSync(dir, { recursive: true });
@@ -202,7 +202,7 @@ describe('check command output', () => {
     ];
     const text = `- [${hold.id}] Freeze — release: told — blocks: push\n` +
       `- ${path} — could not be parsed: entry has no frontmatter — fix or remove this file\n`;
-    expect(await lb(home, ['check', '--blocks', 'push', ...(json ? ['--json'] : [])], { cwd: repo }))
-      .toEqual({ code: 3, out: json ? JSON.stringify(expected) + '\n' : text, err: '' });
+    expect(checkCommand(ctx, 'push', json))
+      .toEqual({ code: 3, stdout: json ? JSON.stringify(expected) + '\n' : text, stderr: '' });
   });
 });

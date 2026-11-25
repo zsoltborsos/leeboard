@@ -1,7 +1,9 @@
+import { basename } from 'node:path';
 import type { Ctx } from '../context.js';
 import { isActive, kindOfId, newestFirst, summarize, type Summary } from '../entry.js';
 import { EXIT, LeeboardError } from '../errors.js';
 import { describeHold } from '../format.js';
+import type { RunResult } from '../run.js';
 import { viewFor } from '../scope.js';
 import { listEntriesWithDiagnostics, type UnreadableEntryFile } from '../store.js';
 import { appendUsage } from '../usage.js';
@@ -26,14 +28,25 @@ export function check(ctx: Ctx, tag: string): CheckData {
   return { project: view.project, holds, unreadable };
 }
 
-/**
- * The CLI entry point for `check`: query, then record the call. The usage write is
- * best-effort; the returned data is exactly what `check` found.
- */
-export function checkCommand(ctx: Ctx, tag: string): CheckData {
+/** Query and record the call best-effort, owning the CLI output and exit code. */
+export function checkCommand(ctx: Ctx, tag: string, json: boolean | undefined): RunResult {
   const data = check(ctx, tag);
-  appendUsage(ctx, data.project, { command: 'check', tag, blocked: data.holds.length > 0 || data.unreadable.length > 0 });
-  return data;
+  const blocked = data.holds.length > 0 || data.unreadable.length > 0;
+  appendUsage(ctx, data.project, { command: 'check', tag, blocked });
+  return {
+    code: blocked ? EXIT.CHECK_BLOCKED : 0,
+    stdout: json ? JSON.stringify([
+      ...data.holds,
+      ...data.unreadable.map(({ path, error }) => ({
+        id: basename(path, '.md'),
+        kind: 'hold',
+        title: `Unreadable hold file: ${path} — could not be parsed: ${error.replace(/\s+/g, ' ').trim()}`,
+        release: 'fix or remove this file',
+        unreadable: true,
+      })),
+    ]) + '\n' : renderCheck(data.holds, data.unreadable),
+    stderr: '',
+  };
 }
 
 /** One line per blocking hold or unreadable hold file; empty when none. */
