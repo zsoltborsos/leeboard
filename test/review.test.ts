@@ -54,6 +54,36 @@ describe('successor-aware owner review', () => {
     expect(reviewCommand(B)).toEqual(empty);
   });
 
+  it.each(['direct', 'chain'] as const)('uses the review clock for a %s endpoint without reclassifying stored statuses', (mode) => {
+    const { home, A, B } = world();
+    const old = createEntry(A, { kind: 'rule', title: 'Old' });
+    const next = createEntry(A, { kind: 'rule', title: 'Replacement', until: B.now.toISOString().slice(0, 10) });
+    supersedeEntry(A, old.id, next.id);
+    const end = mode === 'chain'
+      ? createEntry(A, { kind: 'rule', title: 'Terminal', until: next.until }) : next;
+    if (mode === 'chain') supersedeEntry(A, next.id, end.id);
+    const entries = mode === 'chain' ? [old, next, end] : [old, next];
+    const paths = [...entries.map((entry) => join(scopeDir(home, entry.scope), `${entry.id}.md`)), join(home, 'log.jsonl')];
+    const bytes = paths.map((path) => readFileSync(path));
+    const cursor = readReviewCursor(home);
+    const before = reviewCommand(B, { peek: true });
+    const after = reviewCommand({ ...B, now: new Date(B.now.getTime() + 86_400_000) }, { peek: true });
+    expect(before.new.find((item) => item.id === old.id)).toMatchObject({
+      status: 'superseded', supersededBy: [next.id], current: end.id,
+    });
+    expect(after).toEqual({
+      ...before, new: before.new.map((item) => item.status === 'superseded' ? { ...item, current: null } : item),
+    });
+    expect(after.new.find((item) => item.id === end.id)).toMatchObject({ status: 'active' });
+    expect(after.changed).toEqual([]);
+    expect(after.closed).toEqual([]);
+    expect(renderReview(after).split('\n')).toContain(
+      `- [${old.id}] rule global: Old (claude-code/abcdefgh, user-stated) → ${next.id}`,
+    );
+    expect(readReviewCursor(home)).toBe(cursor);
+    expect(paths.map((path) => readFileSync(path))).toEqual(bytes);
+  });
+
   it('keeps Closed classification, attribution and every revision hint before supersede', async () => {
     const { home, A, B } = world();
     const old = createEntry(A, { kind: 'rule', title: 'Original', body: 'Original body' });
@@ -118,6 +148,7 @@ describe('successor-aware owner review', () => {
       const data = reviewCommand(B, { peek: true });
       expect(data.new.filter((item) => item.supersededBy)).toHaveLength(2);
       expect(resolve).toHaveBeenCalledTimes(1);
+      expect(resolve).toHaveBeenCalledWith(expect.any(Array), B.now);
       expect(scan).toHaveBeenCalledExactlyOnceWith(home);
     } finally { resolve.mockRestore(); scan.mockRestore(); }
   });
