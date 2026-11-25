@@ -152,7 +152,7 @@ describe('exit codes and errors', () => {
     expect(result.code).toBe(0);
     expect(result.out).toContain('lb brief');
     expect(result.out).toContain('--version');
-    expect(result.out).toContain('-v');
+    expect(result.out.split(/\s+/)).toContain('-v');
     expect(result.out).not.toContain('--alias');
     expect(result.out).toContain('[--session <id>]');
     expect(result.out).toContain('[--harness <name>]');
