@@ -49,8 +49,6 @@ npm run build && npm test && npm run typecheck
 
 ## Known limits
 
-- Project aliases are stored and listed but not used for matching; resolution uses paths,
-  the git main checkout and remotes.
 - `lb` has no `--version` flag.
 - The quick pass runs only when called (`lb bosun`, the daily job, or at the start of a
   full pass); `lb brief` ignores lapsed entries but does not expire them.

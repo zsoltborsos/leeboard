@@ -207,7 +207,7 @@ The store location is `~/.leeboard`, or `$LEEBOARD_HOME`.
   global/entries/<id>.md
   machine/entries/<id>.md
   projects/<name>/
-    project.md                  registry: paths, aliases, git remotes
+    project.md                  registry: paths, git remotes
     entries/<id>.md
   log.jsonl                     append-only change log
   revisions/<id>.jsonl          previous versions; created on first revision
@@ -251,10 +251,9 @@ No match means only `global` and `machine` apply. Unknown repositories are never
 registered automatically: the brief says the repository is unregistered and prints the
 `lb project add` command.
 
-`lb project add <name> --path <dir> [--alias a]… [--remote url]…` registers a project or
-adds paths, aliases and remotes to an existing one (`--path` is required every time).
-Aliases are stored and listed but are not used for matching. `lb project rename <old>
-<new> [--path <dir>]` renames the project folder, rewrites `scope: project:<old>` and
+`lb project add <name> --path <dir> [--remote url]…` registers a project or
+adds paths and remotes to an existing one (`--path` is required every time).
+`lb project rename <old> <new> [--path <dir>]` renames the project folder, rewrites `scope: project:<old>` and
 `to: project:<old>` on every entry whatever its status, and makes `--path` the first
 path. Ids, bodies and timestamps do not change. It is safe to run again after an
 interruption. `lb project remove <name>` deletes the project folder from the registry; it
