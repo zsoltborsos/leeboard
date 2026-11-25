@@ -111,6 +111,11 @@ function cites(entry: Entry, path: string): boolean {
   return entry.body.split('\n').some((line) => /^\s*source:/i.test(line) && line.includes(file));
 }
 
+// Score stored outcomes, not elapsed deadlines.
+function withoutDeadlines(entries: Entry[]): Entry[] {
+  return entries.map((entry) => ({ ...entry, until: undefined }));
+}
+
 export function scoreRun(input: {
   baselineIds: Iterable<string>;
   baselineActiveIds?: Iterable<string>;
@@ -121,8 +126,7 @@ export function scoreRun(input: {
   const { entries, expected } = input;
   const baseline = new Set(input.baselineIds);
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
-  // Score stored outcomes, not elapsed deadlines; project copies without until dates.
-  const resolveSuccessor = createSuccessorResolver(entries.map((entry) => ({ ...entry, until: undefined })), new Date(0));
+  const resolveSuccessor = createSuccessorResolver(withoutDeadlines(entries), new Date());
   const misses: string[] = [];
   const statusOf = (id: string) => byId.get(id)?.status ?? 'missing';
 

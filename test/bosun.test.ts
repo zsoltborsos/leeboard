@@ -326,6 +326,27 @@ describe('Bosun stale entry references', () => {
     expect(bosun(ctx).staleReferences).toEqual([]);
   });
 
+  it('reports no active successor for a cited chain ending at a lapsed entry at the context clock', () => {
+    const { home, ctx, put } = setup();
+    const old = put({ id: 'rule-old-0001', status: 'superseded' });
+    const middle = put({ id: 'rule-middle-0002', status: 'superseded', supersedes: [old.id] });
+    const end = put({ id: 'rule-end-0003', supersedes: [middle.id], until: '2026-10-17' });
+    const citing = put({ id: 'rule-citing-0004', title: 'Follow this', body: old.id });
+    const before = snapshot(home);
+    const earlier = bosun({ ...ctx, now: new Date('2026-10-17T23:59:59.999Z') });
+    expect(earlier.staleReferences[0]!.citations).toEqual([
+      { id: old.id, status: 'superseded', current: end.id },
+    ]);
+    const report = bosun(ctx);
+    expect(report.staleReferences).toEqual([{
+      entry: expect.objectContaining({ id: citing.id }),
+      citations: [{ id: old.id, status: 'superseded', current: null }],
+    }]);
+    expect(renderBosun(report)).toBe(`## Stale entry references\n- [${citing.id}] Follow this — cites ${old.id} (superseded; no active successor)\n`);
+    expect(findEntry(home, end.id).status).toBe('active');
+    expect(snapshot(home)).toEqual(before);
+  });
+
   it('reports superseded ids without active successors, including closed endpoints and cycles', () => {
     const { ctx, put } = setup();
     const missing = put({ id: 'rule-missing-successor-0001', status: 'superseded' });

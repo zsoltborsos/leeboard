@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release.
 
-### Fixed
-
-- Read commands use the caller's context clock consistently. Lapsed successor endpoints
-  are not current replacements, in direct or multihop supersede chains; show reports
-  the lapsed chain end without changing stored entries or the log.
-
 ### Added
 
 - A central store of small markdown entries (`~/.leeboard`, or `LEEBOARD_HOME`) in six
@@ -36,7 +30,8 @@ First public release.
 - `lb list` and `lb search` show active entries only; `--all` adds closed ones. A list
   filtered by `--session` or `--harness` still shows every status.
 - Entries still active on disk past `until` are excluded from active list/search views
-  and displayed as `lapsed` in all-status views and show (text/JSON).
+  and displayed as `lapsed` in all-status views and show (text/JSON); supersede chains
+  ending at a lapsed entry have no current entry.
   `lb list --status lapsed` selects them. This is display-only; reads change neither
   entries nor log, and Bosun still persists `expired`.
 - `lb review`, the owner's digest of new, changed and closed entries (new entries name

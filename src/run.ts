@@ -6,7 +6,7 @@ import { bosun, renderBosun } from './commands/bosun.js';
 import { checkCommand, renderCheck } from './commands/check.js';
 import { delta, renderDelta } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
-import { listCommand, renderList, searchEntries, showCommand } from './commands/read.js';
+import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
 import { renderReview, reviewCommand } from './commands/review.js';
 import { ackHandoff, closeRequest, createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
 import type { Ctx } from './context.js';
@@ -138,7 +138,7 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
   if (!command) throw usage('no command given (try --help)');
 
   const home = resolveHome(env);
-  const readCtx = { home, now: new Date() };
+  const readCtx: ReadCtx = { home, now: new Date() };
   const ctx = (): Ctx => ({
     ...readCtx,
     cwd: values.cwd ? resolve(values.cwd) : cwd,

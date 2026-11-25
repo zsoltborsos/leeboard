@@ -3,6 +3,8 @@ import type { Ctx } from '../context.js';
 import { EXIT, LeeboardError } from '../errors.js';
 import { createSuccessorResolver, findEntry, listEntries, scopeDir, type SuccessorResolution } from '../store.js';
 
+export type ReadCtx = Pick<Ctx, 'home' | 'now'>;
+
 type ReadSummary = Omit<Summary, 'status'> & { status: DisplayStatus };
 type ReadEntry = Omit<Entry, 'status'> & { status: DisplayStatus };
 
@@ -10,7 +12,7 @@ export function showEntry(home: string, idPrefix: string): Entry {
   return findEntry(home, idPrefix);
 }
 
-export function showCommand({ home, now }: Pick<Ctx, 'home' | 'now'>, idPrefix: string): {
+export function showCommand({ home, now }: ReadCtx, idPrefix: string): {
   data: ReadEntry & { supersededBy?: string[]; current?: string | null; chainEnd?: SuccessorResolution['chainEnd'] };
   text: string;
 } {
@@ -43,7 +45,7 @@ function usage(message: string): LeeboardError {
  * author (--session, --harness): "what did this run write" wants every status.
  */
 export function listCommand(
-  { home, now }: Pick<Ctx, 'home' | 'now'>,
+  { home, now }: ReadCtx,
   filter: { kind?: string; scope?: string; status?: string; session?: string; harness?: string; all?: boolean },
 ): ReadSummary[] {
   if (filter.kind !== undefined && !(KINDS as readonly string[]).includes(filter.kind)) {
@@ -73,7 +75,7 @@ export function renderList(items: ReadSummary[]): string {
 }
 
 /** Case-insensitive substring match over title and body, across all scopes; active entries unless `all`. */
-export function searchEntries({ home, now }: Pick<Ctx, 'home' | 'now'>, text: string, options: { all?: boolean } = {}): ReadSummary[] {
+export function searchEntries({ home, now }: ReadCtx, text: string, options: { all?: boolean } = {}): ReadSummary[] {
   const needle = text.trim().toLowerCase();
   if (needle === '') throw usage('nothing to search for');
   return listEntries(home)
