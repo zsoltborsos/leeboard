@@ -8,10 +8,8 @@ import { deltaCommand } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
 import { reviewCommand } from './commands/review.js';
-import { ackHandoff, closeRequest, releaseHold, replyToRequest, revokeEntry, supersedeEntry } from './change.js';
-import { addCommand, grantCommand, handoffCommand, holdCommand, initCommand, requestCommand, reviseCommand } from './commands/write.js';
+import { ackCommand, addCommand, closeCommand, grantCommand, handoffCommand, holdCommand, initCommand, releaseCommand, replyCommand, requestCommand, reviseCommand, revokeCommand, supersedeCommand } from './commands/write.js';
 import type { Ctx } from './context.js';
-import { type Entry, summarize } from './entry.js';
 import { EXIT, LeeboardError, usageError } from './errors.js';
 import { resolveIdentity } from './identity.js';
 import { removeProject } from './project-remove.js';
@@ -138,7 +136,6 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     identity: resolveIdentity(values, env),
   });
   const arg = (index: number, name: string): string => args[index] ?? fail(`usage: lb ${command} <${name}>`);
-  const showEntrySummary = (entry: Entry): RunResult => ok(values.json ? jsonLine(summarize(entry)) : renderList([summarize(entry)]));
 
   switch (command) {
     case 'init':
@@ -157,17 +154,17 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
     case 'revise':
       return reviseCommand(ctx, args[0], values);
     case 'release':
-      return showEntrySummary(releaseHold(ctx(), arg(0, 'id'), values.note));
+      return releaseCommand(ctx, args[0], values);
     case 'ack':
-      return showEntrySummary(ackHandoff(ctx(), arg(0, 'id')));
+      return ackCommand(ctx, args[0], values);
     case 'close':
-      return showEntrySummary(closeRequest(ctx(), arg(0, 'id')));
+      return closeCommand(ctx, args[0], values);
     case 'reply':
-      return showEntrySummary(replyToRequest(ctx(), arg(0, 'id'), readBody(values.body) ?? ''));
+      return replyCommand(ctx, args[0], values);
     case 'revoke':
-      return showEntrySummary(revokeEntry(ctx(), arg(0, 'id'), values.reason ?? ''));
+      return revokeCommand(ctx, args[0], values);
     case 'supersede':
-      return showEntrySummary(supersedeEntry(ctx(), arg(0, 'old-id'), values.by ?? fail('usage: lb supersede <old-id> --by <new-id>')));
+      return supersedeCommand(ctx, args[0], values);
 
     case 'show': {
       const { data, text } = showCommand(readCtx, arg(0, 'id'));
@@ -283,7 +280,3 @@ function fail(message: string): never {
   throw usageError(message);
 }
 
-/** `--body -` reads the body from stdin. */
-function readBody(body: string | undefined): string | undefined {
-  return body === '-' ? readFileSync(0, 'utf8') : body;
-}

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createEntry, reviseEntry, type RevisionInput } from '../change.js';
+import { ackHandoff, closeRequest, createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry, type RevisionInput } from '../change.js';
 import type { Ctx } from '../context.js';
 import { type Entry, summarize } from '../entry.js';
 import { usageError } from '../errors.js';
@@ -20,6 +20,9 @@ interface WriteFlags {
   kind?: string;
   origin?: string;
   status?: string;
+  note?: string;
+  reason?: string;
+  by?: string;
 }
 
 function entryFields(flags: WriteFlags): RevisionInput {
@@ -77,6 +80,34 @@ export function reviseCommand(ctx: () => Ctx, id: string | undefined, flags: Wri
     if (flags[flag] !== undefined) throw usageError(`--${flag} cannot be changed by revise`);
   }
   return summaryResult(reviseEntry(ctx(), id, entryFields(flags)), flags);
+}
+
+export function releaseCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(releaseHold(ctx(), id ?? fail('usage: lb release <id>'), flags.note), flags);
+}
+
+export function ackCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(ackHandoff(ctx(), id ?? fail('usage: lb ack <id>')), flags);
+}
+
+export function closeCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(closeRequest(ctx(), id ?? fail('usage: lb close <id>')), flags);
+}
+
+export function replyCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(replyToRequest(ctx(), id ?? fail('usage: lb reply <id>'), readBody(flags.body) ?? ''), flags);
+}
+
+export function revokeCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(revokeEntry(ctx(), id ?? fail('usage: lb revoke <id>'), flags.reason ?? ''), flags);
+}
+
+export function supersedeCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(supersedeEntry(ctx(), id ?? fail('usage: lb supersede <old-id>'), flags.by ?? fail('usage: lb supersede <old-id> --by <new-id>')), flags);
+}
+
+function fail(message: string): never {
+  throw usageError(message);
 }
 
 export function initCommand(home: string, flags: { json?: boolean }): RunResult {

@@ -16,7 +16,52 @@ import type { Harness } from '../src/entry.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
 import { readLogSince } from '../src/log.js';
 import { findEntry, scopeDir } from '../src/store.js';
-import { tempDir } from './helpers.js';
+import { lb, tempDir } from './helpers.js';
+
+describe('lifecycle command results', () => {
+  it.each([
+    ['release', { kind: 'hold', release: 'r' }, ['--note', 'Done'], 'released'],
+    ['ack', { kind: 'handoff', to: 'any' }, [], 'done'],
+    ['close', { kind: 'request', to: 'any' }, [], 'done'],
+    ['reply', { kind: 'request', to: 'any' }, ['--body', 'Answer'], 'active'],
+    ['revoke', { kind: 'rule' }, ['--reason', 'Obsolete'], 'revoked'],
+    ['supersede', { kind: 'rule' }, [], 'superseded'],
+  ] as const)('%s owns text and summary JSON results', async (command, fields, flags, status) => {
+    for (const json of [false, true]) {
+      const { home, add } = setup();
+      const entry = add({ title: 'Lifecycle', ...fields });
+      const extra = command === 'supersede' ? ['--by', add({ kind: 'rule', title: 'Replacement' }).id] : [...flags];
+      const result = await lb(home, [command, entry.id, ...extra, ...(json ? ['--json'] : [])]);
+      const returned = command === 'supersede' ? findEntry(home, extra[1]!) : findEntry(home, entry.id);
+      const returnedStatus = command === 'supersede' ? 'active' : status;
+      const expected = {
+        id: returned.id, kind: entry.kind, scope: 'global', status: returnedStatus, title: returned.title,
+        author: entry.author, created: entry.created, updated: returned.updated,
+        ...('release' in fields ? { release: fields.release } : {}),
+        ...('to' in fields ? { to: fields.to } : {}),
+      };
+      expect(result).toEqual({ code: 0, out: json ? JSON.stringify(expected) + '\n' : `- [${returned.id}] ${returnedStatus} global: ${returned.title}\n`, err: '' });
+    }
+  });
+
+  it.each(['release', 'ack', 'close', 'reply', 'revoke', 'supersede'])('%s resolves identity before missing id', async (command) => {
+    const { home, add } = setup();
+    const entry = add({ kind: 'rule', title: 'Unchanged' });
+    const before = dump(home, [entry]);
+    expect(await lb(home, [command])).toEqual({ code: 1, out: '', err: `lb: usage: lb ${command} <${command === 'supersede' ? 'old-id' : 'id'}>\n` });
+    expect(await lb(home, [command, '--origin', 'invalid'])).toEqual({ code: 1, out: '', err: 'lb: unknown origin \'invalid\' (use user-stated, agent-inferred, mirrored)\n' });
+    expect(dump(home, [entry])).toBe(before);
+  });
+
+  it('requires supersede replacement after identity and old id', async () => {
+    const { home, add } = setup();
+    const entry = add({ kind: 'rule', title: 'Unchanged' });
+    const before = dump(home, [entry]);
+    expect(await lb(home, ['supersede', entry.id])).toEqual({ code: 1, out: '', err: 'lb: usage: lb supersede <old-id> --by <new-id>\n' });
+    expect(await lb(home, ['supersede', entry.id, '--origin', 'invalid'])).toEqual({ code: 1, out: '', err: 'lb: unknown origin \'invalid\' (use user-stated, agent-inferred, mirrored)\n' });
+    expect(dump(home, [entry])).toBe(before);
+  });
+});
 
 const CREATED = new Date('2026-10-17T14:02:11Z');
 const LATER = new Date('2026-10-18T09:00:00Z');

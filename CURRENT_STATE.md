@@ -21,9 +21,9 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   results through flags-object interfaces; `src/result.ts` supplies `RunResult`,
   `result`, `ok` and `jsonLine`. Review's enriched query is `reviewDetails`.
   Purge's command lives in `src/commands/purge.ts`, separate from its store operation;
-  command usage errors use `usageError` in `src/errors.ts`. Creation aliases, `init` and
-  `revise` now return finished results from `src/commands/write.ts`, sharing one field
-  mapping; remaining commands follow.
+  command usage errors use `usageError` in `src/errors.ts`. Entry writes and `init` now
+  return finished results from `src/commands/write.ts`, sharing one field mapping for
+  creation and revision; remaining read, project and report commands follow.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide
   lock (`state/revision.lock`).
