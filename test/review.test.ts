@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from '../src/change.js';
 import { brief } from '../src/commands/brief.js';
 import { delta } from '../src/commands/delta.js';
-import { renderReview, renderReviewDigest, review, reviewCommand, reviewCounts } from '../src/commands/review.js';
+import { renderReview, renderReviewDigest, review, reviewCommand, reviewCounts, runReviewCommand } from '../src/commands/review.js';
 import type { Ctx } from '../src/context.js';
 import { type Status } from '../src/entry.js';
 import { appendLog, logChange, logSize, readCursor, readReviewCursor, writeReviewCursor } from '../src/log.js';
@@ -24,6 +24,54 @@ function world() {
 }
 
 const empty = { new: [], changed: [], closed: [] };
+
+describe('review command results', () => {
+  it.each([false, true])('owns exact output and cursor acknowledgment (json=%s)', (json) => {
+    const { home, A, B } = world();
+    const changed = createEntry(A, { kind: 'rule', title: 'Original', body: 'Body' });
+    const old = createEntry(A, { kind: 'rule', title: 'Old' });
+    review(B);
+    const cursor = readReviewCursor(home);
+    reviseEntry(A, changed.id, { title: 'Revised' });
+    const next = createEntry(A, { kind: 'rule', title: 'Next' });
+    const current = createEntry(A, { kind: 'rule', title: 'Current' });
+    supersedeEntry(A, old.id, next.id);
+    supersedeEntry(A, next.id, current.id);
+    const metadata = { harness: 'claude-code', session: 'abcdefgh-1234', origin: 'user-stated' };
+    const item = (id: string, title: string, status = 'active') => ({
+      id, kind: 'rule', scope: 'global', title, status, ...metadata,
+    });
+    const expectedJson = {
+      new: [
+        item(current.id, 'Current'),
+        { ...item(next.id, 'Next', 'superseded'), supersededBy: [current.id] },
+      ],
+      changed: [{ ...item(changed.id, 'Revised'),
+        before: { title: 'Original', body: 'Body\n', scope: 'global', updated: changed.updated },
+        revisionChanges: ['was: Original'] }],
+      closed: [{ ...item(old.id, 'Old', 'superseded'), supersededBy: [next.id] }],
+    };
+    const expectedText = `## New\n` +
+      `- [${current.id}] rule global: Current (claude-code/abcdefgh, user-stated)\n` +
+      `- [${next.id}] rule global: Next (claude-code/abcdefgh, user-stated) → ${current.id}\n\n` +
+      `## Changed\n- [${changed.id}] rule global: Revised (claude-code/abcdefgh, user-stated)\n  was: Original\n\n` +
+      `## Closed\n- [${old.id}] rule global: Old (claude-code/abcdefgh, user-stated) → ${current.id}\n`;
+    const expected = { code: 0, stdout: json ? JSON.stringify(expectedJson) + '\n' : expectedText, stderr: '' };
+    expect(runReviewCommand(B, { peek: true, json })).toEqual(expected);
+    expect(readReviewCursor(home)).toBe(cursor);
+    expect(runReviewCommand(B, { json })).toEqual(expected);
+    expect(readReviewCursor(home)).toBe(logSize(home));
+    expect(runReviewCommand(B, { json })).toEqual({ code: 0, stdout: '', stderr: '' });
+  });
+
+  it.each([false, true])('prints nothing for an empty store, even JSON (json=%s)', (json) => {
+    const { home, B } = world();
+    expect(runReviewCommand(B, { peek: true, json })).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(readReviewCursor(home)).toBe(0);
+    expect(runReviewCommand(B, { json })).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(readReviewCursor(home)).toBe(logSize(home));
+  });
+});
 
 describe('successor-aware owner review', () => {
   it.each(['direct', 'chain', 'revoked'] as const)('names a %s replacement on New items', async (mode) => {

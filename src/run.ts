@@ -7,7 +7,7 @@ import { checkCommand } from './commands/check.js';
 import { delta, renderDelta } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
-import { renderReview, reviewCommand } from './commands/review.js';
+import { runReviewCommand } from './commands/review.js';
 import { ackHandoff, closeRequest, createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from './change.js';
 import type { Ctx } from './context.js';
 import { type Entry, summarize } from './entry.js';
@@ -232,15 +232,8 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       const items = delta(ctx());
       return ok(items.length === 0 ? '' : values.json ? json(items.map(({ current, ...item }) => item)) : renderDelta(items));
     }
-    case 'review': {
-      const data = reviewCommand(ctx(), { peek: values.peek });
-      const text = renderReview(data);
-      return ok(text === '' ? '' : values.json ? json({
-        new: data.new.map(({ current, ...item }) => item),
-        changed: data.changed.map(({ current, ...item }) => item),
-        closed: data.closed.map(({ current, ...item }) => item),
-      }) : text);
-    }
+    case 'review':
+      return runReviewCommand(ctx(), { peek: values.peek, json: values.json });
     case 'check':
       return checkCommand(ctx(), values.blocks ?? '', values.json);
     case 'usage': {

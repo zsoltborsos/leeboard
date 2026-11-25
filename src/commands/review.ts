@@ -2,6 +2,7 @@ import type { Ctx } from '../context.js';
 import { isActive, type Kind, type Origin, type RevisionBefore, type Status } from '../entry.js';
 import { latestChanges, type LogLine, readLogSince, readReviewCursor, writeReviewCursor } from '../log.js';
 import { createSuccessorResolver, listEntries, readRevision } from '../store.js';
+import { json, ok, type RunResult } from '../result.js';
 
 export interface ReviewItem {
   id: string;
@@ -96,6 +97,17 @@ export function reviewCommand(ctx: Ctx, options: { peek?: boolean } = {}): Revie
     }
   }
   return data;
+}
+
+/** Own the CLI's empty-output rule, rendering and public JSON shape. */
+export function runReviewCommand(ctx: Ctx, options: { peek?: boolean; json?: boolean } = {}): RunResult {
+  const data = reviewCommand(ctx, { peek: options.peek });
+  const text = renderReview(data);
+  return ok(text === '' ? '' : options.json ? json({
+    new: data.new.map(({ current, ...item }) => item),
+    changed: data.changed.map(({ current, ...item }) => item),
+    closed: data.closed.map(({ current, ...item }) => item),
+  }) : text);
 }
 
 export function reviewCounts(data: ReviewData): ReviewCounts {
