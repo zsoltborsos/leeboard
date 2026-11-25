@@ -269,7 +269,12 @@ Every command accepts `--json`. Identity comes from flags or environment:
 (`user-stated`, `agent-inferred` by default, `mirrored`). A session id may be up to 128
 characters. `--cwd <dir>` overrides the working directory.
 
+`--version` / `-v` prints the installed package version and exits successfully without
+requiring a command. It takes precedence over a supplied command and remains plain text
+with `--json`. If `--help` is also supplied, help takes precedence.
+
 ```
+lb --version, -v                 installed package version
 lb init
 lb brief   [--cwd]               session-start orientation
 lb delta   [--cwd]               entries changed since this session's cursor

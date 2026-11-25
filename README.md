@@ -137,7 +137,8 @@ lb review                         # the owner's digest of what changed
 lb usage                          # how often briefs and checks actually ran
 ```
 
-Run `lb --help` for every command. `lb release`, `ack`, `reply`, `close`, `revoke`,
+Run `lb --help` for every command. `lb --version` (or `lb -v`) prints the installed
+Leeboard package version. `lb release`, `ack`, `reply`, `close`, `revoke`,
 `supersede` and `revise` change an existing entry. `lb purge` deletes entries for good,
 on the owner's word (`lb purge --closed` clears entries closed over 30 days ago); the
 [`memory` skill](skills/memory/SKILL.md) is the quick reference for agents.
