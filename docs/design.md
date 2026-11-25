@@ -164,11 +164,15 @@ sandboxed agents may live in another PID namespace. Creating an entry takes no l
 busy lock never stops an agent adding one. Reads never lock.
 
 **Superseded chains.** `lb show` on a superseded entry prints the successors and, if the
-active replacement is further along the chain, `Current: <id>`. If the chain ends without
-an active entry it says so. `lb delta` and `lb review` suffix superseded lines with
-` → <current id>`. The chain is resolved at read time from the `supersedes` links across
-all scopes, cycle-safe, and never stored. JSON output for superseded entries gains
-`supersededBy`; `show` also has `current` and `chainEnd`.
+live replacement is further along the chain, `Current: <id>`. Current means live at the
+caller's context clock, not merely stored as active. A direct or multihop chain ending
+at a lapsed entry has `current: null` and a `chainEnd` with status `lapsed`; show prints
+`Current: none — chain ends at <id> (lapsed)`. Other chains ending without a live entry
+also say so. `lb delta` and `lb review` suffix superseded lines with ` → <current id>`,
+falling back to the direct successor when there is no current replacement. The chain is
+resolved at read time from the `supersedes` links across all scopes, cycle-safe, and
+never stored; neither is the display-only `lapsed` status. JSON output for superseded
+entries gains `supersededBy`; `show` also has `current` and `chainEnd`.
 
 **Purge.** Closed entries are history, and history turns into noise: an entry about a
 tool that no longer exists, or a closed entry that turns up in a search, only costs the

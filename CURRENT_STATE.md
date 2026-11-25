@@ -14,7 +14,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   `project add|rename|remove|list`. Every command takes `--json`. `list` and `search` show
   active entries unless `--all` (an author-filtered `list` shows every status).
   Active views exclude lapsed entries; all-status views and `show` display them as
-  `lapsed`, without changing the stored entry or log.
+  `lapsed`, without changing the stored entry or log. Reads use the context clock;
+  supersede chains ending at lapsed entries have no current replacement.
   `lb --version` / `lb -v` prints the installed package version.
 - **Revision.** `lb revise` changes an active entry in place and archives the previous
   version in `revisions/<id>.jsonl`. Revisions and lifecycle changes share a store-wide

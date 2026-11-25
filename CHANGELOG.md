@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First public release.
 
+### Fixed
+
+- Read commands use the caller's context clock consistently. Lapsed successor endpoints
+  are not current replacements, in direct or multihop supersede chains; show reports
+  the lapsed chain end without changing stored entries or the log.
+
 ### Added
 
 - A central store of small markdown entries (`~/.leeboard`, or `LEEBOARD_HOME`) in six
