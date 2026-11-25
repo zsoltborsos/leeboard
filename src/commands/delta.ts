@@ -55,7 +55,7 @@ export function delta(ctx: Ctx): DeltaItem[] {
     if (entry.release !== undefined) item.release = entry.release;
     if (entry.to !== undefined) item.to = entry.to;
     if (line.status === 'superseded') {
-      resolveSuccessor ??= createSuccessorResolver(listEntries(ctx.home));
+      resolveSuccessor ??= createSuccessorResolver(listEntries(ctx.home), ctx.now);
       const { successors, current } = resolveSuccessor(line.id);
       item.supersededBy = successors.map((next) => next.id);
       item.current = current?.id ?? null;

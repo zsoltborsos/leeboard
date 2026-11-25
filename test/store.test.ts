@@ -400,19 +400,45 @@ describe('listEntries with an id filter', () => {
 });
 
 describe('successor resolver', () => {
+  const now = new Date('2026-10-17T12:00:00Z');
   const a = sampleEntry({ id: 'rule-a', status: 'superseded' });
   const b = sampleEntry({ id: 'rule-b', status: 'superseded', supersedes: [a.id] });
   const c = sampleEntry({ id: 'rule-c', supersedes: [b.id] });
 
-  it('resolves active entries to themselves without expiry checks', () => {
-    const active = sampleEntry({ until: '2000-01-01' });
-    expect(createSuccessorResolver([active])(active.id)).toEqual({ successors: [], current: active, chainEnd: { id: active.id, status: 'active' } });
+  it('resolves live entries to themselves and reports standalone lapsed entries without a current', () => {
+    const active = sampleEntry();
+    expect(createSuccessorResolver([active], now)(active.id)).toEqual({ successors: [], current: active, chainEnd: { id: active.id, status: 'active' } });
+    const lapsed = { ...active, until: '2000-01-01' };
+    expect(createSuccessorResolver([lapsed], now)(lapsed.id)).toEqual({ successors: [], current: null, chainEnd: { id: lapsed.id, status: 'lapsed' } });
+  });
+
+  it('reports lapsed direct and multihop endpoints without changing stored status', () => {
+    const lapsed = { ...c, until: '2000-01-01' };
+    const entries = [a, b, lapsed];
+    const before = structuredClone(entries);
+    const resolve = createSuccessorResolver(entries, now);
+    expect(resolve(a.id)).toEqual({ successors: [b], current: null, chainEnd: { id: c.id, status: 'lapsed' } });
+    expect(resolve(b.id)).toEqual({ successors: [lapsed], current: null, chainEnd: { id: c.id, status: 'lapsed' } });
+    expect(entries).toEqual(before);
+    expect(lapsed.status).toBe('active');
+  });
+
+  it('skips a lapsed branch for a live branch, otherwise preserves the first failed endpoint', () => {
+    const lapsed = { ...c, until: '2000-01-01' };
+    const live = sampleEntry({ id: 'rule-live', supersedes: [a.id] });
+    expect(createSuccessorResolver([a, b, lapsed, live], now)(a.id)).toEqual({
+      successors: [b, live], current: live, chainEnd: { id: live.id, status: 'active' },
+    });
+    const closed = { ...live, status: 'revoked' as const };
+    expect(createSuccessorResolver([a, b, lapsed, closed], now)(a.id)).toEqual({
+      successors: [b, closed], current: null, chainEnd: { id: c.id, status: 'lapsed' },
+    });
   });
 
   it('follows one hop and multiple hops without mutating fixtures or sharing visited state', () => {
     const entries = [a, b, c];
     const before = structuredClone(entries);
-    const resolve = createSuccessorResolver(entries);
+    const resolve = createSuccessorResolver(entries, now);
     expect(resolve(a.id)).toEqual({ successors: [b], current: c, chainEnd: { id: c.id, status: 'active' } });
     expect(resolve(b.id)).toEqual({ successors: [c], current: c, chainEnd: { id: c.id, status: 'active' } });
     expect(resolve(a.id).current).toBe(c);
@@ -422,7 +448,7 @@ describe('successor resolver', () => {
   it('resolves several old entries merged into one replacement, deduplicating direct links', () => {
     const old = sampleEntry({ id: 'rule-other', status: 'superseded' });
     const merged = sampleEntry({ supersedes: [a.id, old.id, a.id] });
-    const resolve = createSuccessorResolver([a, old, merged]);
+    const resolve = createSuccessorResolver([a, old, merged], now);
     expect(resolve(a.id)).toEqual({ successors: [merged], current: merged, chainEnd: { id: merged.id, status: 'active' } });
     expect(resolve(old.id).current).toBe(merged);
   });
@@ -430,20 +456,20 @@ describe('successor resolver', () => {
   it('returns all direct successors in input order and selects the first reachable active branch', () => {
     const first = sampleEntry({ id: 'rule-first', supersedes: [a.id] });
     const second = sampleEntry({ id: 'rule-second', supersedes: [a.id] });
-    expect(createSuccessorResolver([a, second, first])(a.id)).toEqual({ successors: [second, first], current: second, chainEnd: { id: second.id, status: 'active' } });
+    expect(createSuccessorResolver([a, second, first], now)(a.id)).toEqual({ successors: [second, first], current: second, chainEnd: { id: second.id, status: 'active' } });
     const revoked = { ...first, status: 'revoked' as const };
-    expect(createSuccessorResolver([a, revoked, second])(a.id)).toEqual({ successors: [revoked, second], current: second, chainEnd: { id: second.id, status: 'active' } });
+    expect(createSuccessorResolver([a, revoked, second], now)(a.id)).toEqual({ successors: [revoked, second], current: second, chainEnd: { id: second.id, status: 'active' } });
   });
 
   it.each(['revoked', 'released', 'done', 'retired', 'expired'] as const)('does not follow a %s endpoint', (status) => {
     const closed = { ...b, status };
-    const resolve = createSuccessorResolver([a, closed, c]);
+    const resolve = createSuccessorResolver([a, closed, c], now);
     expect(resolve(a.id)).toEqual({ successors: [closed], current: null, chainEnd: { id: closed.id, status } });
     expect(resolve(closed.id)).toMatchObject({ current: null, chainEnd: { id: closed.id, status } });
   });
 
   it('leaves unknown ids and superseded entries without a replacement unresolved', () => {
-    const resolve = createSuccessorResolver([a, c]);
+    const resolve = createSuccessorResolver([a, c], now);
     expect(resolve(a.id)).toEqual({ successors: [], current: null, chainEnd: null });
     expect(resolve('unknown')).toEqual({ successors: [], current: null, chainEnd: null });
     // The missing starting entry must exist before its meaning can be followed.
@@ -451,11 +477,11 @@ describe('successor resolver', () => {
   });
 
   it('reports a superseded leaf or closed endpoint through several hops', () => {
-    expect(createSuccessorResolver([a, b])(a.id)).toEqual({
+    expect(createSuccessorResolver([a, b], now)(a.id)).toEqual({
       successors: [b], current: null, chainEnd: { id: b.id, status: 'superseded' },
     });
     const revoked = { ...c, status: 'revoked' as const };
-    expect(createSuccessorResolver([a, b, revoked])(a.id)).toEqual({
+    expect(createSuccessorResolver([a, b, revoked], now)(a.id)).toEqual({
       successors: [b], current: null, chainEnd: { id: c.id, status: 'revoked' },
     });
   });
@@ -463,19 +489,19 @@ describe('successor resolver', () => {
   it('reports the first failed branch endpoint if no branch reaches an active entry', () => {
     const revoked = { ...c, status: 'revoked' as const };
     const other = sampleEntry({ id: 'rule-other', status: 'released', supersedes: [a.id] });
-    expect(createSuccessorResolver([a, b, revoked, other])(a.id).chainEnd).toEqual({ id: c.id, status: 'revoked' });
-    expect(createSuccessorResolver([a, other, b, revoked])(a.id).chainEnd).toEqual({ id: other.id, status: 'released' });
+    expect(createSuccessorResolver([a, b, revoked, other], now)(a.id).chainEnd).toEqual({ id: c.id, status: 'revoked' });
+    expect(createSuccessorResolver([a, other, b, revoked], now)(a.id).chainEnd).toEqual({ id: other.id, status: 'released' });
   });
 
   it('terminates self-cycles, two-entry cycles and still tries later branches', () => {
     const self = { ...a, supersedes: [a.id] };
-    expect(createSuccessorResolver([self])(a.id)).toEqual({ successors: [self], current: null, chainEnd: { id: a.id, status: 'superseded' } });
+    expect(createSuccessorResolver([self], now)(a.id)).toEqual({ successors: [self], current: null, chainEnd: { id: a.id, status: 'superseded' } });
     const cyclicA = { ...a, supersedes: [b.id] };
-    const resolve = createSuccessorResolver([cyclicA, b]);
+    const resolve = createSuccessorResolver([cyclicA, b], now);
     expect(resolve(a.id)).toMatchObject({ current: null, chainEnd: { id: a.id, status: 'superseded' } });
     expect(resolve(b.id)).toMatchObject({ current: null, chainEnd: { id: b.id, status: 'superseded' } });
     const valid = { ...c, supersedes: [a.id] };
-    expect(createSuccessorResolver([cyclicA, b, valid])(a.id)).toEqual({ successors: [b, valid], current: valid, chainEnd: { id: valid.id, status: 'active' } });
+    expect(createSuccessorResolver([cyclicA, b, valid], now)(a.id)).toEqual({ successors: [b, valid], current: valid, chainEnd: { id: valid.id, status: 'active' } });
   });
 });
 

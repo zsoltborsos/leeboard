@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { appendFileSync, closeSync, existsSync, fstatSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { type Entry, HARNESSES, parseEntry, type RevisionRecord, serializeEntry } from './entry.js';
+import { displayStatus, type DisplayStatus, type Entry, HARNESSES, isActive, parseEntry, type RevisionRecord, serializeEntry } from './entry.js';
 import { EXIT, LeeboardError } from './errors.js';
 
 export const PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -278,14 +278,14 @@ export function listEntriesWithDiagnostics(
 
 export interface SuccessorResolution {
   successors: Entry[];
-  /** No reachable active entry: missing, closed or cyclic chains resolve to null. */
+  /** No reachable live entry: lapsed, missing, closed or cyclic chains resolve to null. */
   current: Entry | null;
-  /** Selected active/closed endpoint or first failed branch's end; null if no entry or successor was found. */
-  chainEnd: Pick<Entry, 'id' | 'status'> | null;
+  /** Selected live/closed/lapsed endpoint or first failed branch's end; null if no entry or successor was found. */
+  chainEnd: { id: string; status: DisplayStatus } | null;
 }
 
 /** Index reverse supersedes links once, in input order, without reading or changing the store. */
-export function createSuccessorResolver(entries: readonly Entry[]): (id: string) => SuccessorResolution {
+export function createSuccessorResolver(entries: readonly Entry[], now: Date): (id: string) => SuccessorResolution {
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
   const successors = new Map<string, Entry[]>();
   for (const entry of entries) {
@@ -305,7 +305,7 @@ export function createSuccessorResolver(entries: readonly Entry[]): (id: string)
     let firstEnd: Entry | null = null;
     for (const next of successors.get(id) ?? []) {
       const found = terminal(next.id, seen);
-      if (found?.status === 'active') return found;
+      if (found && isActive(found, now)) return found;
       firstEnd ??= found;
     }
     return firstEnd ?? entry;
@@ -315,8 +315,8 @@ export function createSuccessorResolver(entries: readonly Entry[]): (id: string)
     const direct = successors.get(id) ?? [];
     return {
       successors: direct,
-      current: end?.status === 'active' ? end : null,
-      chainEnd: end && (end.status !== 'superseded' || direct.length > 0) ? { id: end.id, status: end.status } : null,
+      current: end && isActive(end, now) ? end : null,
+      chainEnd: end && (end.status !== 'superseded' || direct.length > 0) ? { id: end.id, status: displayStatus(end, now) } : null,
     };
   };
 }

@@ -30,7 +30,7 @@ export function bosun(ctx: Ctx, options: { dryRun?: boolean } = {}): BosunReport
   };
   const entries = scan.entries.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
-  const resolveSuccessor = createSuccessorResolver(entries);
+  const resolveSuccessor = createSuccessorResolver(entries, ctx.now);
   const groups = new Map<string, BosunReport['duplicates'][number]>();
   const actor: Ctx = { ...ctx, identity: { ...ctx.identity, harness: 'bosun' } };
   const localRoots = [homedir(), ...listProjects(ctx.home).flatMap((project) => project.paths)];

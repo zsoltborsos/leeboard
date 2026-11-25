@@ -89,7 +89,7 @@ export function reviewCommand(ctx: Ctx, options: { peek?: boolean } = {}): Revie
   for (const group of [data.new, data.changed, data.closed]) {
     for (const item of group) {
       if (item.status !== 'superseded') continue;
-      resolveSuccessor ??= createSuccessorResolver(listEntries(ctx.home));
+      resolveSuccessor ??= createSuccessorResolver(listEntries(ctx.home), ctx.now);
       const { successors, current } = resolveSuccessor(item.id);
       item.supersededBy = successors.map((next) => next.id);
       item.current = current?.id ?? null;

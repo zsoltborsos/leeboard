@@ -19,7 +19,7 @@ export function showCommand({ home, now }: Pick<Ctx, 'home' | 'now'>, idPrefix: 
   let text = serializeEntry({ ...entry, status } as Entry);
   if (entry.status !== 'superseded') return { data: { ...entry, status }, text };
 
-  const { successors, current, chainEnd } = createSuccessorResolver(listEntries(home))(entry.id);
+  const { successors, current, chainEnd } = createSuccessorResolver(listEntries(home), now)(entry.id);
   const lines = successors.map((next) => `Superseded by: ${next.id} — ${next.title}\n`);
   if (successors.length === 0) {
     lines.push('Superseded by: none found\n');

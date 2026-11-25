@@ -121,7 +121,8 @@ export function scoreRun(input: {
   const { entries, expected } = input;
   const baseline = new Set(input.baselineIds);
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
-  const resolveSuccessor = createSuccessorResolver(entries);
+  // Score stored outcomes, not elapsed deadlines; project copies without until dates.
+  const resolveSuccessor = createSuccessorResolver(entries.map((entry) => ({ ...entry, until: undefined })), new Date(0));
   const misses: string[] = [];
   const statusOf = (id: string) => byId.get(id)?.status ?? 'missing';
 
