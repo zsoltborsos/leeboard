@@ -161,6 +161,10 @@ describe('exit codes and errors', () => {
     expect(result.out).toContain('--since');
     expect(result.out).toContain('lb bosun [--quick] [--dry-run] [--json]');
     expect(result.out).toContain('lb review [--peek] [--json]');
+    expect(result.out).toContain(
+      '  lb purge --closed [--days <n>] [--dry-run]\n' +
+      '                                          delete entries closed more than n days ago (default 30)\n',
+    );
   });
 
   it('starts every command description in --help at column 43', async () => {

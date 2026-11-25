@@ -50,6 +50,35 @@ describe('delta command results', () => {
     expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
   });
 
+  it.each([false, true])('indexes only once when command delivery needs successors (json=%s)', (json) => {
+    const { home, A, B } = world();
+    deltaCommand(B, json);
+    const scan = vi.spyOn(store, 'listEntries');
+    const resolve = vi.spyOn(store, 'createSuccessorResolver');
+    try {
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+      const ordinary = createEntry(A, { kind: 'rule', title: 'Ordinary' });
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: json ? JSON.stringify([{
+        id: ordinary.id, kind: 'rule', scope: 'project:alpha', event: 'created', status: 'active', title: 'Ordinary',
+      }]) + '\n' : `- [${ordinary.id}] rule created: Ordinary\n`, stderr: '' });
+      expect(scan).not.toHaveBeenCalled();
+      expect(resolve).not.toHaveBeenCalled();
+      const first = createEntry(A, { kind: 'rule', title: 'First' });
+      const second = createEntry(A, { kind: 'rule', title: 'Second' });
+      const next = createEntry(A, { kind: 'rule', title: 'Merged', scope: 'project:beta' });
+      supersedeEntry(A, first.id, next.id);
+      supersedeEntry(A, second.id, next.id);
+      const expected = [first, second].map((entry) => ({
+        id: entry.id, kind: 'rule', scope: 'project:alpha', event: 'status', status: 'superseded', title: entry.title,
+        supersededBy: [next.id],
+      }));
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: json ? JSON.stringify(expected) + '\n' :
+        [first, second].map((entry) => `- [${entry.id}] rule superseded: ${entry.title} → ${next.id}\n`).join(''), stderr: '' });
+      expect(scan).toHaveBeenCalledExactlyOnceWith(home);
+      expect(resolve).toHaveBeenCalledExactlyOnceWith(expect.any(Array), B.now);
+    } finally { scan.mockRestore(); resolve.mockRestore(); }
+  });
+
   it.each([false, true])('keeps anonymous delivery empty without creating state (json=%s)', (json) => {
     const { home, A, as } = world();
     createEntry(A, { kind: 'rule', title: 'Unseen' });

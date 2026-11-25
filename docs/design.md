@@ -272,6 +272,12 @@ may not run it.
 
 ## 7. CLI
 
+Internally, `check`, `review`, `delta` and `purge` command modules own their finished
+`RunResult` (exit code, stdout and stderr), using the shared type and output helpers in
+`src/result.ts`. `src/run.ts` parses options, routes these calls and maps thrown errors
+to exit codes. Review's lightweight data query remains separate for brief's digest;
+delta only builds a successor index when included superseded items need it.
+
 Every command accepts `--json`. Identity comes from flags or environment:
 `--harness` / `LEEBOARD_HARNESS`, `--session` / `LEEBOARD_SESSION`, and `--origin`
 (`user-stated`, `agent-inferred` by default, `mirrored`). A session id may be up to 128
