@@ -15,8 +15,8 @@ const OWNER_REVIEW: readonly Harness[] = ['claude-code', 'pi', 'funkyoctopus', '
 
 /** Decide actor permissions only; callers still validate applicability and perform changes. */
 export function requirePermission(identity: Author, request: PolicyAction): void {
-  const { action } = request;
-  if (action === 'purge' || action === 'project-remove' || action === 'project-rename') {
+  if (!('entry' in request)) {
+    const { action } = request;
     const harness = identity.harness;
     if (harness !== null && NO_STORE_CHANGES.includes(harness)) {
       const operation = { purge: 'purge entries', 'project-remove': 'remove projects', 'project-rename': 'rename projects' }[action];
@@ -25,7 +25,7 @@ export function requirePermission(identity: Author, request: PolicyAction): void
     return;
   }
 
-  const { entry } = request;
+  const { action, entry } = request;
   const protectedKind = entry.kind === 'hold' || entry.kind === 'grant';
   const unattendedRunner = identity.harness === 'helmraiser';
   if (action === 'create') {
