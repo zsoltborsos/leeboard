@@ -94,6 +94,27 @@ describe('a store of 300 entries', () => {
     expect(result.stdout).toContain('## Inbox');
   });
 
+  it.skipIf(process.env.CI)(`answers clear and blocked checks each in under ${BUDGET_MS} ms (wall time, node startup included)`, () => {
+    const { lb } = world();
+    const clearMs = medianMs(() => {
+      const result = lb('check', '--blocks', 'push');
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toBe('');
+    });
+    const blockedMs = medianMs(() => {
+      const result = lb('check', '--blocks', 'helmraiser-run');
+      expect(result.status).toBe(3);
+      expect(result.stdout.trim().split('\n')).toHaveLength(30);
+      expect(result.stdout).toContain('— release: when told — blocks: helmraiser-run');
+      expect(result.stderr).toBe('');
+    });
+
+    console.info(`300 entries, median of 5: clear check ${clearMs.toFixed(0)} ms, blocked check ${blockedMs.toFixed(0)} ms`);
+    expect(clearMs).toBeLessThan(BUDGET_MS);
+    expect(blockedMs).toBeLessThan(BUDGET_MS);
+  });
+
   it.skipIf(process.env.CI)(`answers brief and delta each in under ${BUDGET_MS} ms (wall time, node startup included)`, () => {
     const { home, lb } = world();
 
