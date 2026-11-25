@@ -1,6 +1,6 @@
 // Isolation for every test file: nothing may reach the real ~/.leeboard or the
 // developer's global git configuration.
-import { afterAll } from 'vitest';
+import { afterAll, beforeEach, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -22,3 +22,15 @@ process.env.GIT_COMMITTER_EMAIL = 'committer@example.test';
 
 // Never let git walk above the temp area looking for a repository.
 process.env.GIT_CEILING_DIRECTORIES = tmpdir();
+
+// `npm run test:future` sets LEEBOARD_TEST_FUTURE: the suite runs with the clock five
+// years ahead, so a fixture date that quietly depends on today's date fails now, not on
+// the day it passes. Tests that compare the clock with real file times skip themselves.
+// Set before each test, since a test file's own `vi.useRealTimers()` would undo it.
+if (process.env.LEEBOARD_TEST_FUTURE) {
+  const future = Date.now() + 5 * 365 * 86_400_000;
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true });
+    vi.setSystemTime(future);
+  });
+}

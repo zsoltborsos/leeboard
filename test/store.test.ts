@@ -134,7 +134,7 @@ describe('revision lock', () => {
     } finally { clock.mockRestore(); }
   });
 
-  it('bounds contention without entering the callback or removing another writer lock', () => {
+  it.skipIf(process.env.LEEBOARD_TEST_FUTURE)('bounds contention without entering the callback or removing another writer lock', () => {
     const home = tempDir();
     const lock = join(home, 'state', 'revision.lock');
     mkdirSync(lock, { recursive: true });

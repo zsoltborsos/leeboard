@@ -35,6 +35,9 @@ npx vitest run test/check.test.ts
 
 # Also the opt-in timing tests
 LEEBOARD_PERF=1 npm test
+
+# The suite with the clock five years ahead: catches fixture dates that will pass
+npm run test:future
 ```
 
 Tests must never touch a real store. `test/setup.ts` points `HOME` and `LEEBOARD_HOME`
@@ -51,6 +54,7 @@ surrounding code; there is no formatter or linter to run. Before opening a pull 
 ```bash
 npm run build
 npm test
+npm run test:future
 npm run typecheck
 ```
 

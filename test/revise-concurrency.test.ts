@@ -112,7 +112,7 @@ describe('concurrent revision writers', () => {
     }
   }, 10_000);
 
-  it('a delayed stale-lock contender cannot take over the winner fresh lock', async () => {
+  it.skipIf(process.env.LEEBOARD_TEST_FUTURE)('a delayed stale-lock contender cannot take over the winner fresh lock', async () => {
     const home = tempDir();
     const original = sampleEntry({ body: 'Original body\n' });
     writeEntry(home, original);

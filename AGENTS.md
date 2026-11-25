@@ -38,6 +38,7 @@ Current state and next moves: [CURRENT_STATE.md](CURRENT_STATE.md) and [TASKS.md
 npm ci
 npm run build
 npm test
+npm run test:future
 npm run typecheck
 ```
 

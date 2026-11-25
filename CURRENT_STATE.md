@@ -45,7 +45,7 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 ## Gates
 
 ```bash
-npm run build && npm test && npm run typecheck
+npm run build && npm test && npm run test:future && npm run typecheck
 ```
 
 The suite passes. `LEEBOARD_PERF=1 npm test` also runs the opt-in timing tests.
