@@ -85,7 +85,7 @@ export function brief(ctx: Ctx): BriefData {
  * The CLI entry point for `brief`: gather and render, then record the call. The usage
  * write is best-effort; JSON mode still records the rendered text's size and count.
  */
-export function briefCommand(ctx: Ctx, flags: { json?: boolean } = {}): RunResult {
+export function briefCommand(ctx: Ctx, flags: { json?: boolean }): RunResult {
   const data = brief(ctx);
   const { text, entries } = renderBriefWithCount(data);
   appendUsage(ctx, data.project, { command: 'brief', entries, chars: text.length });

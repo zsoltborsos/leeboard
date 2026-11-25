@@ -7,8 +7,8 @@ import { entryIdsIn, isActive, staleHoldDays, summarize, type Summary } from '..
 import { usageError } from '../errors.js';
 import { listProjects } from '../projects.js';
 import { jsonLine, ok, type RunResult } from '../result.js';
-import type { FullContext, FullFlags } from './bosun-full.js';
 import { createSuccessorResolver, listEntriesWithDiagnostics, type UnreadableEntryFile } from '../store.js';
+import type { FullContext, FullFlags } from './bosun-full.js';
 
 export interface BosunReport {
   dryRun: boolean;
@@ -35,15 +35,7 @@ export async function bosunCommand(context: FullContext, flags: BosunFlags): Pro
     if (flags.dryRun || flags.quick) throw usageError('bosun --full does not combine with --quick or --dry-run');
     // Loaded only here, so brief, delta and check never pay for the runner code.
     const { bosunFullCommand } = await import('./bosun-full.js');
-    return bosunFullCommand(context, {
-      runner: flags.runner,
-      model: flags.model,
-      thinking: flags.thinking,
-      memoryRoot: flags.memoryRoot,
-      timeout: flags.timeout,
-      ifChanged: flags.ifChanged,
-      json: flags.json,
-    });
+    return bosunFullCommand(context, flags);
   }
   const report = bosun(context.ctx(), { dryRun: flags.dryRun });
   return ok(flags.json ? jsonLine(report) : renderBosun(report));

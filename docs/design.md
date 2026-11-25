@@ -272,12 +272,17 @@ may not run it.
 
 ## 7. CLI
 
-Internally, every command entry point in `src/commands/` owns its finished `RunResult`
-(exit code, stdout and stderr), with `json` in its flags object. `src/run.ts` retains
+Internally, command entry points follow `<name>Command(ctx, [positionals,] flags)` and
+return their finished `RunResult` (exit code, stdout and stderr), with `json` in the
+required flags object. Read-only entry views take `ReadCtx`; commands needing no
+identity (`init`, `usage`) take `home`. A lazy context thunk is used only where flags
+or arguments must be validated before identity (`add`, `revise`, `purge`, project
+rename/remove, and Bosun's full-pass flags). The project context also carries `home` so
+add/list remain identity-free; Bosun carries the startup environment and cwd for its full pass. `src/run.ts` retains
 option parsing, shared usage text, identity and clock context, routing, help/version,
-and thrown-error mapping. Commands that validate before resolving identity take a
-lazy context thunk. Entry writes and `init` live in `src/commands/write.ts`; creation
-and revision share one flag-to-field mapping. Write and project command modules load
+and thrown-error mapping. Entry writes and `init` live in `src/commands/write.ts`;
+creation and revision share one flag-to-field mapping, and creation aliases use the
+same create command with their kind. Write and project command modules load
 only on their respective routes, not on the brief/delta/check hot path. Bosun's command
 loads its full-pass module lazily, only for `--full`, keeping runner code off that path.
 `src/result.ts` supplies `RunResult`, `result(code, stdout)`, `ok(stdout)` and

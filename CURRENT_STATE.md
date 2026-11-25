@@ -18,7 +18,9 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
   supersede chains ending at lapsed entries have no current replacement.
   `lb --version` / `lb -v` prints the installed package version.
 - **Command modules.** Every command entry point owns its finished `RunResult` through
-  a flags-object interface. `src/run.ts` retains parsing, help/version, identity and
+  a required flags-object interface. Context is concrete except where validation must
+  precede identity resolution; creation aliases share one create command. `src/run.ts`
+  retains parsing, help/version, identity and
   clock context, routing and thrown-error mapping. `src/result.ts` supplies `RunResult`,
   `result`, `ok` and `jsonLine`; command usage errors share `usageError` in `src/errors.ts`.
   Entry writes and `init` live in `src/commands/write.ts`, with one field mapping for
@@ -60,8 +62,8 @@ Leeboard 0.1.0 is feature-complete for its first public release and not yet tagg
 npm run build && npm test && npm run test:future && npm run typecheck
 ```
 
-Build, typecheck and all 1,617 tests pass after the command-module migration, including
-cold-process checks of route-only module loading; the future-clock suite passes
-(1,615 tests, 2 skipped). The router-shape and CLI smoke
+Build, typecheck and all 1,622 tests pass after the command-module migration, including
+identity/validation ordering and cold-process checks of route-only module loading;
+the future-clock suite passes (1,620 tests, 2 skipped). The router-shape and CLI smoke
 acceptance checks also pass. `LEEBOARD_PERF=1 npm test` runs the opt-in timing tests;
 they were not rerun for this refactor.

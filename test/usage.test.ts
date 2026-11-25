@@ -156,13 +156,13 @@ describe('brief and check recording', () => {
     const { home, repo } = projectWorld();
     const ctx = ctxFor(home, repo);
 
-    const empty = briefCommand(ctx);
+    const empty = briefCommand(ctx, {});
     expect(readUsage(home)).toHaveLength(1);
     expect(empty).toMatchObject({ code: 0, stderr: '' });
     expect(readUsage(home)[0]).toMatchObject({ command: 'brief', project: 'P', entries: 0, chars: empty.stdout.length });
 
     createEntry(ctx, { kind: 'rule', title: 'A rule' });
-    const populated = briefCommand(ctx);
+    const populated = briefCommand(ctx, {});
     const records = readUsage(home);
     expect(records).toHaveLength(2);
     expect(populated).toMatchObject({ code: 0, stderr: '' });
@@ -185,11 +185,11 @@ describe('brief and check recording', () => {
 
   it('records the resolved project, and null outside a registered project', () => {
     const { home, repo } = projectWorld();
-    briefCommand(ctxFor(home, repo));
+    briefCommand(ctxFor(home, repo), {});
     expect(readUsage(home)[0]).toMatchObject({ project: 'P' });
 
     const loose = tempDir();
-    briefCommand(ctxFor(loose, tempDir()));
+    briefCommand(ctxFor(loose, tempDir()), {});
     expect(readUsage(loose)[0]).toMatchObject({ project: null });
   });
 
@@ -206,7 +206,7 @@ describe('brief and check recording', () => {
       put({ id: `rule-number-${String(i).padStart(4, '0')}`, kind: 'rule', title: `Rule number ${i} with a reasonably descriptive title` });
     }
 
-    const result = briefCommand(ctx);
+    const result = briefCommand(ctx, {});
     expect(result).toMatchObject({ code: 0, stderr: '' });
     expect(result.stdout).toBe(renderBrief(brief(ctx)));
     expect(result.stdout.length).toBeLessThanOrEqual(8000);
@@ -298,7 +298,7 @@ describe('brief and check recording', () => {
     const ctx = ctxFor(home, repo, 'A', 'pi');
     createEntry(ctx, { kind: 'rule', title: 'X' });
     const before = logSize(home);
-    briefCommand(ctx);
+    briefCommand(ctx, {});
     expect(logSize(home)).toBe(before);
     expect(readCursor(home, 'A')).toBe(before);
   });

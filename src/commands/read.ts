@@ -14,7 +14,7 @@ export function showEntry(home: string, idPrefix: string): Entry {
   return findEntry(home, idPrefix);
 }
 
-export function showCommand({ home, now }: ReadCtx, idPrefix: string | undefined, flags: { json?: boolean } = {}): RunResult {
+export function showCommand({ home, now }: ReadCtx, idPrefix: string | undefined, flags: { json?: boolean }): RunResult {
   if (idPrefix === undefined) throw usageError('usage: lb show <id>');
   const entry = showEntry(home, idPrefix);
   const status = displayStatus(entry, now);
@@ -43,29 +43,29 @@ export function showCommand({ home, now }: ReadCtx, idPrefix: string | undefined
  */
 export function listCommand(
   { home, now }: ReadCtx,
-  filter: { kind?: string; scope?: string; status?: string; session?: string; harness?: string; all?: boolean; json?: boolean },
+  flags: { kind?: string; scope?: string; status?: string; session?: string; harness?: string; all?: boolean; json?: boolean },
 ): RunResult {
-  if (filter.kind !== undefined && !(KINDS as readonly string[]).includes(filter.kind)) {
-    throw usageError(`unknown kind '${filter.kind}' (use ${KINDS.join(', ')})`);
+  if (flags.kind !== undefined && !(KINDS as readonly string[]).includes(flags.kind)) {
+    throw usageError(`unknown kind '${flags.kind}' (use ${KINDS.join(', ')})`);
   }
-  if (filter.status !== undefined && ![...STATUSES, 'lapsed'].includes(filter.status)) {
-    throw usageError(`unknown status '${filter.status}' (use ${[...STATUSES, 'lapsed'].join(', ')})`);
+  if (flags.status !== undefined && ![...STATUSES, 'lapsed'].includes(flags.status)) {
+    throw usageError(`unknown status '${flags.status}' (use ${[...STATUSES, 'lapsed'].join(', ')})`);
   }
-  if (filter.scope !== undefined) scopeDir(home, filter.scope); // validates the scope
-  if (filter.all && filter.status !== undefined) throw usageError('--all does not combine with --status');
-  const byAuthor = filter.session !== undefined || filter.harness !== undefined;
-  const status = filter.status ?? (filter.all || byAuthor ? undefined : 'active');
-  const items = listEntries(home, filter.scope === undefined ? undefined : [filter.scope])
+  if (flags.scope !== undefined) scopeDir(home, flags.scope); // validates the scope
+  if (flags.all && flags.status !== undefined) throw usageError('--all does not combine with --status');
+  const byAuthor = flags.session !== undefined || flags.harness !== undefined;
+  const status = flags.status ?? (flags.all || byAuthor ? undefined : 'active');
+  const items = listEntries(home, flags.scope === undefined ? undefined : [flags.scope])
     .filter(
       (entry) =>
-        (filter.kind ?? entry.kind) === entry.kind &&
+        (flags.kind ?? entry.kind) === entry.kind &&
         (status === undefined || status === displayStatus(entry, now)) &&
-        (filter.session === undefined || entry.author.session === filter.session) &&
-        (filter.harness === undefined || entry.author.harness === filter.harness),
+        (flags.session === undefined || entry.author.session === flags.session) &&
+        (flags.harness === undefined || entry.author.harness === flags.harness),
     )
     .sort(newestFirst)
     .map((entry) => ({ ...summarize(entry), status: displayStatus(entry, now) }));
-  return ok(filter.json ? jsonLine(items) : renderList(items));
+  return ok(flags.json ? jsonLine(items) : renderList(items));
 }
 
 export function renderList(items: ReadSummary[]): string {
@@ -73,13 +73,13 @@ export function renderList(items: ReadSummary[]): string {
 }
 
 /** Case-insensitive substring match over title and body, across all scopes; active entries unless `all`. */
-export function searchCommand({ home, now }: ReadCtx, text: string, options: { all?: boolean; json?: boolean } = {}): RunResult {
+export function searchCommand({ home, now }: ReadCtx, text: string, flags: { all?: boolean; json?: boolean }): RunResult {
   const needle = text.trim().toLowerCase();
   if (needle === '') throw usageError('nothing to search for');
   const items = listEntries(home)
-    .filter((entry) => options.all || displayStatus(entry, now) === 'active')
+    .filter((entry) => flags.all || displayStatus(entry, now) === 'active')
     .filter((entry) => entry.title.toLowerCase().includes(needle) || entry.body.toLowerCase().includes(needle))
     .sort(newestFirst)
     .map((entry) => ({ ...summarize(entry), status: displayStatus(entry, now) }));
-  return ok(options.json ? jsonLine(items) : renderList(items));
+  return ok(flags.json ? jsonLine(items) : renderList(items));
 }

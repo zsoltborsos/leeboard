@@ -47,67 +47,53 @@ function summaryResult(entry: Entry, flags: WriteFlags): RunResult {
   return ok(flags.json ? jsonLine(summarize(entry)) : renderList([summarize(entry)]));
 }
 
-function createCommand(ctx: () => Ctx, kind: string, flags: WriteFlags): RunResult {
-  const context = ctx();
+export function createCommand(ctx: Ctx, kind: string, flags: WriteFlags): RunResult {
   const fields = entryFields(flags);
-  return summaryResult(createEntry(context, { ...fields, kind, title: fields.title ?? '' }), flags);
+  return summaryResult(createEntry(ctx, { ...fields, kind, title: fields.title ?? '' }), flags);
 }
 
 export function addCommand(ctx: () => Ctx, kind: string | undefined, flags: WriteFlags): RunResult {
-  if (kind === undefined) throw usageError('usage: lb add <kind>');
-  return createCommand(ctx, kind, flags);
-}
-
-export function holdCommand(ctx: () => Ctx, flags: WriteFlags): RunResult {
-  return createCommand(ctx, 'hold', flags);
-}
-
-export function grantCommand(ctx: () => Ctx, flags: WriteFlags): RunResult {
-  return createCommand(ctx, 'grant', flags);
-}
-
-export function handoffCommand(ctx: () => Ctx, flags: WriteFlags): RunResult {
-  return createCommand(ctx, 'handoff', flags);
-}
-
-export function requestCommand(ctx: () => Ctx, flags: WriteFlags): RunResult {
-  return createCommand(ctx, 'request', flags);
+  const entryKind = requireArg('add', 'kind', kind);
+  return createCommand(ctx(), entryKind, flags);
 }
 
 export function reviseCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  if (id === undefined) throw usageError('usage: lb revise <id>');
+  const entryId = requireArg('revise', 'id', id);
   for (const flag of ['kind', 'origin', 'status'] as const) {
     if (flags[flag] !== undefined) throw usageError(`--${flag} cannot be changed by revise`);
   }
-  return summaryResult(reviseEntry(ctx(), id, entryFields(flags)), flags);
+  return summaryResult(reviseEntry(ctx(), entryId, entryFields(flags)), flags);
 }
 
-export function releaseCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  return summaryResult(releaseHold(ctx(), id ?? fail('usage: lb release <id>'), flags.note), flags);
+export function releaseCommand(ctx: Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(releaseHold(ctx, requireArg('release', 'id', id), flags.note), flags);
 }
 
-export function ackCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  return summaryResult(ackHandoff(ctx(), id ?? fail('usage: lb ack <id>')), flags);
+export function ackCommand(ctx: Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(ackHandoff(ctx, requireArg('ack', 'id', id)), flags);
 }
 
-export function closeCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  return summaryResult(closeRequest(ctx(), id ?? fail('usage: lb close <id>')), flags);
+export function closeCommand(ctx: Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(closeRequest(ctx, requireArg('close', 'id', id)), flags);
 }
 
-export function replyCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  return summaryResult(replyToRequest(ctx(), id ?? fail('usage: lb reply <id>'), readBody(flags.body) ?? ''), flags);
+export function replyCommand(ctx: Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(replyToRequest(ctx, requireArg('reply', 'id', id), readBody(flags.body) ?? ''), flags);
 }
 
-export function revokeCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  return summaryResult(revokeEntry(ctx(), id ?? fail('usage: lb revoke <id>'), flags.reason ?? ''), flags);
+export function revokeCommand(ctx: Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  return summaryResult(revokeEntry(ctx, requireArg('revoke', 'id', id), flags.reason ?? ''), flags);
 }
 
-export function supersedeCommand(ctx: () => Ctx, id: string | undefined, flags: WriteFlags): RunResult {
-  return summaryResult(supersedeEntry(ctx(), id ?? fail('usage: lb supersede <old-id>'), flags.by ?? fail('usage: lb supersede <old-id> --by <new-id>')), flags);
+export function supersedeCommand(ctx: Ctx, id: string | undefined, flags: WriteFlags): RunResult {
+  const oldId = requireArg('supersede', 'old-id', id);
+  if (flags.by === undefined) throw usageError('usage: lb supersede <old-id> --by <new-id>');
+  return summaryResult(supersedeEntry(ctx, oldId, flags.by), flags);
 }
 
-function fail(message: string): never {
-  throw usageError(message);
+function requireArg(command: string, name: string, value: string | undefined): string {
+  if (value === undefined) throw usageError(`usage: lb ${command} <${name}>`);
+  return value;
 }
 
 export function initCommand(home: string, flags: { json?: boolean }): RunResult {

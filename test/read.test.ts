@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { listCommand as listResult, renderList, searchCommand, showCommand, showEntry, type ReadSummary, type ShowData } from '../src/commands/read.js';
+import { listCommand, renderList, searchCommand, showCommand, showEntry, type ReadSummary, type ShowData } from '../src/commands/read.js';
 import type { RunResult } from '../src/result.js';
 import { parseEntry, serializeEntry } from '../src/entry.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
@@ -19,11 +19,11 @@ function jsonData<T>(result: RunResult): T {
 }
 
 /** Keep data assertions readable while checking the finished command result each time. */
-function listCommand(...[ctx, flags]: Parameters<typeof listResult>): ReadSummary[] {
-  return jsonData<ReadSummary[]>(listResult(ctx, { ...flags, json: true }));
+function listJson(...[ctx, flags]: Parameters<typeof listCommand>): ReadSummary[] {
+  return jsonData<ReadSummary[]>(listCommand(ctx, { ...flags, json: true }));
 }
 
-function searchEntries(...[ctx, text, flags]: Parameters<typeof searchCommand>): ReadSummary[] {
+function searchJson(...[ctx, text, flags]: Parameters<typeof searchCommand>): ReadSummary[] {
   return jsonData<ReadSummary[]>(searchCommand(ctx, text, { ...flags, json: true }));
 }
 
@@ -70,7 +70,7 @@ describe('show', () => {
   });
 
   it('requires an id before lookup', () => {
-    expect(failure(() => showCommand(context(tempDir()), undefined)).message).toBe('usage: lb show <id>');
+    expect(failure(() => showCommand(context(tempDir()), undefined, {})).message).toBe('usage: lb show <id>');
   });
 
   it('exits 4 for an unknown id', () => {
@@ -136,8 +136,8 @@ describe('successor-aware show CLI', () => {
       expect(jsonData<ShowData>(showCommand(context(home, new Date('2000-01-02T00:00:00Z')), old.id, { json: true }))).toEqual(expected);
     }
     expect(await lb(home, ['list', '--json'])).toEqual({ code: 0, err: '', out: '[]\n' });
-    expect(JSON.parse((await lb(home, ['list', '--status', 'lapsed', '--json'])).out)).toEqual(listCommand(context(home), { status: 'lapsed' }));
-    expect(listCommand(context(home), { status: 'lapsed' }).map((entry) => entry.id)).toEqual([end.id]);
+    expect(JSON.parse((await lb(home, ['list', '--status', 'lapsed', '--json'])).out)).toEqual(listJson(context(home), { status: 'lapsed' }));
+    expect(listJson(context(home), { status: 'lapsed' }).map((entry) => entry.id)).toEqual([end.id]);
     expect(paths.map((path) => readFileSync(path))).toEqual(bytes);
     expect(readFileSync(paths[2], 'utf8')).toMatch(/^status: active$/m);
   });
@@ -215,8 +215,8 @@ describe('successor-aware show CLI', () => {
 
 describe('list', () => {
   it('lists active entries newest first, and every status with all', () => {
-    expect(listCommand(context(store()), {}).map((e) => e.id)).toEqual(['hold-tunnel-0002', 'rule-pipefail-0001', 'reference-logs-0004']);
-    expect(listCommand(context(store()), { all: true }).map((e) => e.id)).toEqual([
+    expect(listJson(context(store()), {}).map((e) => e.id)).toEqual(['hold-tunnel-0002', 'rule-pipefail-0001', 'reference-logs-0004']);
+    expect(listJson(context(store()), { all: true }).map((e) => e.id)).toEqual([
       'hold-tunnel-0002',
       'rule-pipefail-0001',
       'hold-old-0003',
@@ -225,29 +225,29 @@ describe('list', () => {
   });
 
   it('refuses all together with a status', () => {
-    expect(failure(() => listCommand(context(store()), { all: true, status: 'active' })).exitCode).toBe(EXIT.USAGE);
+    expect(failure(() => listJson(context(store()), { all: true, status: 'active' })).exitCode).toBe(EXIT.USAGE);
   });
 
   it('filters by kind, scope and status, alone or together', () => {
     const home = store();
-    expect(listCommand(context(home), { kind: 'hold' }).map((e) => e.id)).toEqual(['hold-tunnel-0002']);
-    expect(listCommand(context(home), { kind: 'hold', all: true }).map((e) => e.id)).toEqual(['hold-tunnel-0002', 'hold-old-0003']);
-    expect(listCommand(context(home), { scope: 'machine' }).map((e) => e.id)).toEqual(['reference-logs-0004']);
-    expect(listCommand(context(home), { status: 'released' }).map((e) => e.id)).toEqual(['hold-old-0003']);
-    expect(listCommand(context(home), { kind: 'hold', scope: 'project:alpha', status: 'active' }).map((e) => e.id)).toEqual(['hold-tunnel-0002']);
+    expect(listJson(context(home), { kind: 'hold' }).map((e) => e.id)).toEqual(['hold-tunnel-0002']);
+    expect(listJson(context(home), { kind: 'hold', all: true }).map((e) => e.id)).toEqual(['hold-tunnel-0002', 'hold-old-0003']);
+    expect(listJson(context(home), { scope: 'machine' }).map((e) => e.id)).toEqual(['reference-logs-0004']);
+    expect(listJson(context(home), { status: 'released' }).map((e) => e.id)).toEqual(['hold-old-0003']);
+    expect(listJson(context(home), { kind: 'hold', scope: 'project:alpha', status: 'active' }).map((e) => e.id)).toEqual(['hold-tunnel-0002']);
   });
 
   it('refuses a filter value that cannot match anything, with the usage exit code', () => {
     const home = store();
-    expect(failure(() => listCommand(context(home), { kind: 'note' })).exitCode).toBe(EXIT.USAGE);
-    expect(failure(() => listCommand(context(home), { status: 'open' })).exitCode).toBe(EXIT.USAGE);
-    expect(failure(() => listCommand(context(home), { scope: 'project:../x' })).exitCode).toBe(EXIT.USAGE);
+    expect(failure(() => listJson(context(home), { kind: 'note' })).exitCode).toBe(EXIT.USAGE);
+    expect(failure(() => listJson(context(home), { status: 'open' })).exitCode).toBe(EXIT.USAGE);
+    expect(failure(() => listJson(context(home), { scope: 'project:../x' })).exitCode).toBe(EXIT.USAGE);
   });
 
   it('renders one line per entry, and nothing for none', () => {
     const expected = '- [hold-tunnel-0002] active project:alpha: Tunnel is open\n' + '- [hold-old-0003] released project:alpha: Old hold\n';
-    expect(listResult(context(store()), { kind: 'hold', all: true })).toEqual({ code: 0, stdout: expected, stderr: '' });
-    expect(renderList(listCommand(context(store()), { kind: 'hold', all: true }))).toBe(expected);
+    expect(listCommand(context(store()), { kind: 'hold', all: true })).toEqual({ code: 0, stdout: expected, stderr: '' });
+    expect(renderList(listJson(context(store()), { kind: 'hold', all: true }))).toBe(expected);
     expect(renderList([])).toBe('');
   });
 });
@@ -255,22 +255,22 @@ describe('list', () => {
 describe('search', () => {
   it('matches title and body of active entries, case-insensitively; closed ones only with all', () => {
     const home = store();
-    expect(searchEntries(context(home), 'PIPEFAIL').map((e) => e.id)).toEqual(['rule-pipefail-0001']);
-    expect(searchEntries(context(home), 'its own status').map((e) => e.id)).toEqual(['rule-pipefail-0001']);
-    expect(searchEntries(context(home), 'old hold')).toEqual([]);
-    expect(searchEntries(context(home), 'old hold', { all: true }).map((e) => e.id)).toEqual(['hold-old-0003']);
-    expect(searchEntries(context(home), '/var/log').map((e) => e.id)).toEqual(['reference-logs-0004']);
-    expect(searchEntries(context(home), 'zzz')).toEqual([]);
+    expect(searchJson(context(home), 'PIPEFAIL', {}).map((e) => e.id)).toEqual(['rule-pipefail-0001']);
+    expect(searchJson(context(home), 'its own status', {}).map((e) => e.id)).toEqual(['rule-pipefail-0001']);
+    expect(searchJson(context(home), 'old hold', {})).toEqual([]);
+    expect(searchJson(context(home), 'old hold', { all: true }).map((e) => e.id)).toEqual(['hold-old-0003']);
+    expect(searchJson(context(home), '/var/log', {}).map((e) => e.id)).toEqual(['reference-logs-0004']);
+    expect(searchJson(context(home), 'zzz', {})).toEqual([]);
   });
 
   it('returns finished text results, including empty output', () => {
     const ctx = context(store());
-    expect(searchCommand(ctx, 'PIPEFAIL')).toEqual({ code: 0, stderr: '', stdout: '- [rule-pipefail-0001] active global: Set pipefail before committing\n' });
-    expect(searchCommand(ctx, 'zzz')).toEqual({ code: 0, stderr: '', stdout: '' });
+    expect(searchCommand(ctx, 'PIPEFAIL', {})).toEqual({ code: 0, stderr: '', stdout: '- [rule-pipefail-0001] active global: Set pipefail before committing\n' });
+    expect(searchCommand(ctx, 'zzz', {})).toEqual({ code: 0, stderr: '', stdout: '' });
   });
 
   it('needs something to search for', () => {
-    expect(failure(() => searchEntries(context(store()), '  ')).exitCode).toBe(EXIT.USAGE);
+    expect(failure(() => searchJson(context(store()), '  ', {})).exitCode).toBe(EXIT.USAGE);
   });
 });
 
@@ -294,21 +294,21 @@ describe('lapsed reads', () => {
   it('filters on display status, preserving closed and author views', () => {
     const { home, entries } = fixture();
     const active = entries.slice(1, 3).map((e) => e.id);
-    expect(listCommand(context(home), {}).map((e) => e.id)).toEqual(active);
-    expect(listCommand(context(home), { status: 'active' }).map((e) => e.id)).toEqual(active);
-    expect(searchEntries(context(home), 'sample').map((e) => e.id)).toEqual(active);
+    expect(listJson(context(home), {}).map((e) => e.id)).toEqual(active);
+    expect(listJson(context(home), { status: 'active' }).map((e) => e.id)).toEqual(active);
+    expect(searchJson(context(home), 'sample', {}).map((e) => e.id)).toEqual(active);
     const all = entries.map((e, i) => ({ ...e, status: i === 0 ? 'lapsed' : e.status }));
-    for (const result of [listCommand(context(home), { all: true }), searchEntries(context(home), 'sample', { all: true }),
-      listCommand(context(home), { session: 'A' }), listCommand(context(home), { harness: 'claude-code' })]) {
+    for (const result of [listJson(context(home), { all: true }), searchJson(context(home), 'sample', { all: true }),
+      listJson(context(home), { session: 'A' }), listJson(context(home), { harness: 'claude-code' })]) {
       expect(result.map(({ id, status }) => ({ id, status }))).toEqual(all.map(({ id, status }) => ({ id, status })));
     }
-    expect(listCommand(context(home), { status: 'lapsed' }).map((e) => e.id)).toEqual([entries[0].id]);
+    expect(listJson(context(home), { status: 'lapsed' }).map((e) => e.id)).toEqual([entries[0].id]);
     for (const status of ['expired', 'released']) {
-      expect(listCommand(context(home), { status }).map((e) => e.id)).toEqual(entries.filter((e) => e.status === status).map((e) => e.id));
+      expect(listJson(context(home), { status }).map((e) => e.id)).toEqual(entries.filter((e) => e.status === status).map((e) => e.id));
     }
-    expect(listCommand(context(home), { session: 'A', status: 'active' }).map((e) => e.id)).toEqual(active);
-    expect(listResult(context(home), { all: true }).stdout).toContain('lapsed global: Sample');
-    expect(failure(() => listCommand(context(home), { all: true, status: 'lapsed' })).exitCode).toBe(EXIT.USAGE);
+    expect(listJson(context(home), { session: 'A', status: 'active' }).map((e) => e.id)).toEqual(active);
+    expect(listCommand(context(home), { all: true }).stdout).toContain('lapsed global: Sample');
+    expect(failure(() => listJson(context(home), { all: true, status: 'lapsed' })).exitCode).toBe(EXIT.USAGE);
   });
 
   it('reports lapsed through the CLI without changing the entry or log', async () => {
@@ -334,7 +334,7 @@ describe('lapsed reads', () => {
       const result = await lb(home, args);
       expect(result.code).toBe(0);
       expect(result.err).toBe('');
-      expect(JSON.parse(result.out)).toEqual(listCommand(context(home), { status: 'lapsed' }));
+      expect(JSON.parse(result.out)).toEqual(listJson(context(home), { status: 'lapsed' }));
     }
     for (const args of [['list', '--all'], ['search', 'sample', '--all']]) {
       expect(await lb(home, args)).toEqual({ code: 0, err: '', out: `- [${entry.id}] lapsed global: Sample\n` });
@@ -364,11 +364,11 @@ describe('lapsed reads', () => {
     const ctx = context(home, new Date(now));
     const entry = sampleEntry({ until });
     writeEntry(home, entry);
-    expect(listCommand(ctx, { status }).map((e) => e.id)).toEqual([entry.id]);
-    expect(listCommand(ctx, { status: status === 'active' ? 'lapsed' : 'active' })).toEqual([]);
-    expect(searchEntries(ctx, 'sample', { all: true }).map((e) => e.status)).toEqual([status]);
+    expect(listJson(ctx, { status }).map((e) => e.id)).toEqual([entry.id]);
+    expect(listJson(ctx, { status: status === 'active' ? 'lapsed' : 'active' })).toEqual([]);
+    expect(searchJson(ctx, 'sample', { all: true }).map((e) => e.status)).toEqual([status]);
     expect(jsonData<ShowData>(showCommand(ctx, entry.id, { json: true }))).toEqual({ ...entry, status });
-    expect(showCommand(ctx, entry.id)).toEqual({
+    expect(showCommand(ctx, entry.id, {})).toEqual({
       code: 0, stderr: '', stdout: serializeEntry(entry).replace(/^status: active$/m, `status: ${status}`),
     });
   });
@@ -407,7 +407,7 @@ describe('summary metadata', () => {
 
   it('list and search summaries carry author, created and updated, and no body', () => {
     const home = metadataStore();
-    for (const summaries of [listCommand(context(home), {}), searchEntries(context(home), 'rule')]) {
+    for (const summaries of [listJson(context(home), {}), searchJson(context(home), 'rule', {})]) {
       const authored = summaries.find((entry) => entry.id === 'rule-meta-0001')!;
       expect(authored.author).toEqual({ harness: 'helmraiser', session: 'run-42', origin: 'mirrored' });
       expect(authored.created).toBe('2026-10-17T10:00:00Z');
@@ -486,18 +486,18 @@ describe('list author filters', () => {
 
   it('filters by session or harness alone, and by both together', () => {
     const home = filterStore();
-    expect(listCommand(context(home), { session: 'run-1' }).map((e) => e.id)).toEqual(['hold-run-a-0001', 'reference-shared-0003']);
-    expect(listCommand(context(home), { harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001']);
-    expect(listCommand(context(home), { session: 'run-2', harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002']);
-    expect(listCommand(context(home), { session: 'run-1', harness: 'pi' }).map((e) => e.id)).toEqual(['reference-shared-0003']);
+    expect(listJson(context(home), { session: 'run-1' }).map((e) => e.id)).toEqual(['hold-run-a-0001', 'reference-shared-0003']);
+    expect(listJson(context(home), { harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001']);
+    expect(listJson(context(home), { session: 'run-2', harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002']);
+    expect(listJson(context(home), { session: 'run-1', harness: 'pi' }).map((e) => e.id)).toEqual(['reference-shared-0003']);
   });
 
   it('combines author filters with kind, scope and status', () => {
     const home = filterStore();
-    expect(listCommand(context(home), { session: 'run-1', kind: 'hold' }).map((e) => e.id)).toEqual(['hold-run-a-0001']);
-    expect(listCommand(context(home), { session: 'run-1', scope: 'global' }).map((e) => e.id)).toEqual(['hold-run-a-0001', 'reference-shared-0003']);
-    expect(listCommand(context(home), { harness: 'helmraiser', status: 'active' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001']);
-    expect(listCommand(context(home), { harness: 'helmraiser', kind: 'rule', scope: 'machine', status: 'active' }).map((e) => e.id)).toEqual([
+    expect(listJson(context(home), { session: 'run-1', kind: 'hold' }).map((e) => e.id)).toEqual(['hold-run-a-0001']);
+    expect(listJson(context(home), { session: 'run-1', scope: 'global' }).map((e) => e.id)).toEqual(['hold-run-a-0001', 'reference-shared-0003']);
+    expect(listJson(context(home), { harness: 'helmraiser', status: 'active' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001']);
+    expect(listJson(context(home), { harness: 'helmraiser', kind: 'rule', scope: 'machine', status: 'active' }).map((e) => e.id)).toEqual([
       'rule-run-b-0002',
     ]);
   });
@@ -509,9 +509,9 @@ describe('list author filters', () => {
       author: { harness: 'helmraiser', session: 'run-2', origin: 'agent-inferred' },
       created: '2026-10-17T09:00:00Z', updated: '2026-10-17T09:00:00Z',
     }));
-    expect(listCommand(context(home), { session: 'run-2' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'rule-run-old-0005']);
-    expect(listCommand(context(home), { harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001', 'rule-run-old-0005']);
-    expect(listCommand(context(home), { session: 'run-2', status: 'active' }).map((e) => e.id)).toEqual(['rule-run-b-0002']);
+    expect(listJson(context(home), { session: 'run-2' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'rule-run-old-0005']);
+    expect(listJson(context(home), { harness: 'helmraiser' }).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001', 'rule-run-old-0005']);
+    expect(listJson(context(home), { session: 'run-2', status: 'active' }).map((e) => e.id)).toEqual(['rule-run-b-0002']);
   });
 
   it('treats CLI author filters as exact data filters, not caller identities', async () => {
@@ -520,21 +520,21 @@ describe('list author filters', () => {
     const result = await lb(home, ['list', '--harness', 'helmraiser', '--json']);
     expect(result.code).toBe(0);
     expect(result.err).toBe('');
-    expect(JSON.parse(result.out)).toEqual(listCommand(context(home), { harness: 'helmraiser' }));
+    expect(JSON.parse(result.out)).toEqual(listJson(context(home), { harness: 'helmraiser' }));
   });
 
   it('returns nothing for an unknown or inexact session or harness', () => {
     const home = filterStore();
-    expect(listCommand(context(home), { session: 'run-9' })).toEqual([]);
-    expect(listCommand(context(home), { harness: 'bosun' })).toEqual([]);
-    expect(listCommand(context(home), { session: 'run' })).toEqual([]);
-    expect(listCommand(context(home), { session: 'RUN-1' })).toEqual([]);
-    expect(listCommand(context(home), { harness: 'Helmraiser' })).toEqual([]);
+    expect(listJson(context(home), { session: 'run-9' })).toEqual([]);
+    expect(listJson(context(home), { harness: 'bosun' })).toEqual([]);
+    expect(listJson(context(home), { session: 'run' })).toEqual([]);
+    expect(listJson(context(home), { session: 'RUN-1' })).toEqual([]);
+    expect(listJson(context(home), { harness: 'Helmraiser' })).toEqual([]);
   });
 
   it('returns active entries without an author filter, and every one, anonymous included, with all', () => {
-    expect(listCommand(context(filterStore()), {}).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001', 'reference-shared-0003']);
-    expect(listCommand(context(filterStore()), { all: true }).map((e) => e.id)).toEqual([
+    expect(listJson(context(filterStore()), {}).map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001', 'reference-shared-0003']);
+    expect(listJson(context(filterStore()), { all: true }).map((e) => e.id)).toEqual([
       'rule-run-b-0002',
       'hold-run-a-0001',
       'reference-shared-0003',
@@ -543,7 +543,7 @@ describe('list author filters', () => {
   });
 
   it('keeps newest-first ordering and summary metadata on filtered results', () => {
-    const filtered = listCommand(context(filterStore()), { harness: 'helmraiser' });
+    const filtered = listJson(context(filterStore()), { harness: 'helmraiser' });
     expect(filtered.map((e) => e.id)).toEqual(['rule-run-b-0002', 'hold-run-a-0001']);
     expect(filtered[0]).toMatchObject({
       author: { harness: 'helmraiser', session: 'run-2', origin: 'agent-inferred' },

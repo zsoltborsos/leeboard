@@ -206,6 +206,14 @@ describe('commands', () => {
     expect(await lb(tempDir(), ['add', ...flags])).toEqual({ code: 1, out: '', err: 'lb: usage: lb add <kind>\n' });
   });
 
+  it.each(['hold', 'grant', 'handoff', 'request'])('%s resolves identity before validating creation fields', async (command) => {
+    const home = join(tempDir('lb-parent-'), 'store');
+    expect(await lb(home, [command, '--origin', 'invalid'])).toEqual({
+      code: 1, out: '', err: "lb: unknown origin 'invalid' (use user-stated, agent-inferred, mirrored)\n",
+    });
+    expect(existsSync(home)).toBe(false);
+  });
+
   it.each([
     ['hold', ['--release', 'Owner approves', '--blocks', ' push, ,merge '], { release: 'Owner approves', blocks: ['push', 'merge'] }],
     ['grant', ['--holder', 'owner'], { holder: 'owner' }],
@@ -830,6 +838,7 @@ describe('the built CLI (spawned)', () => {
     [['brief'], []],
     [['delta'], []],
     [['check', '--blocks', 'push'], []],
+    [['bosun', '--quick'], []],
     [['init'], ['write.js']],
     [['project', 'list'], ['project.js']],
   ])('loads new command modules only on their routes: %j', (args, expectedModules) => {
@@ -856,6 +865,7 @@ describe('the built CLI (spawned)', () => {
     expect(result.code).toBe(0);
     expect(result.stderr).toBe('');
     expect(loaded.some((url) => url.endsWith('/run.js'))).toBe(true);
+    expect(loaded.filter((url) => /\/(?:commands\/bosun-full|bosun\/runner)\.js$/.test(url))).toEqual([]);
     const commandModules = loaded
       .filter((url) => /\/commands\/(?:project|write)\.js$/.test(url))
       .map((url) => url.split('/').at(-1))
