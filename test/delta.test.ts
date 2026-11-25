@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { brief } from '../src/commands/brief.js';
-import { delta, renderDelta } from '../src/commands/delta.js';
+import { delta, deltaCommand, renderDelta } from '../src/commands/delta.js';
 import { createEntry, releaseHold, replyToRequest, reviseEntry, revokeEntry, supersedeEntry } from '../src/change.js';
 import type { Ctx } from '../src/context.js';
 import { logChange, logSize, readCursor, writeCursor } from '../src/log.js';
@@ -25,6 +25,62 @@ function world() {
 }
 
 const lines = (ctx: Ctx) => renderDelta(delta(ctx));
+
+describe('delta command results', () => {
+  it.each([false, true])('owns exact output, direct successor JSON and cursor advancement (json=%s)', (json) => {
+    const { home, A, B } = world();
+    const old = createEntry(A, { kind: 'rule', title: 'Old rule' });
+    expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(readCursor(home, 'B')).toBe(logSize(home));
+    const next = createEntry(A, { kind: 'rule', title: 'Next', scope: 'project:beta' });
+    const current = createEntry(A, { kind: 'rule', title: 'Current', scope: 'project:gamma' });
+    supersedeEntry(A, old.id, next.id);
+    supersedeEntry(A, next.id, current.id);
+    const expected = [{
+      id: old.id, kind: 'rule', scope: 'project:alpha', event: 'status', status: 'superseded', title: 'Old rule',
+      supersededBy: [next.id],
+    }];
+    expect(deltaCommand(B, json)).toEqual({
+      code: 0,
+      stdout: json ? JSON.stringify(expected) + '\n' : `- [${old.id}] rule superseded: Old rule → ${current.id}\n`,
+      stderr: '',
+    });
+    expect(readCursor(home, 'B')).toBe(logSize(home));
+    expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+  });
+
+  it.each([false, true])('keeps anonymous delivery empty without creating state (json=%s)', (json) => {
+    const { home, A, as } = world();
+    createEntry(A, { kind: 'rule', title: 'Unseen' });
+    expect(deltaCommand(as(null, 'pi'), json)).toEqual({ code: 0, stdout: '', stderr: '' });
+    expect(existsSync(join(home, 'state'))).toBe(false);
+  });
+
+  it.each([false, true])('indexes only once and only for delivered superseded items (json=%s)', (json) => {
+    const { home, A, B } = world();
+    const scan = vi.spyOn(store, 'listEntries');
+    const resolve = vi.spyOn(store, 'createSuccessorResolver');
+    try {
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: '', stderr: '' });
+      const ordinary = createEntry(A, { kind: 'rule', title: 'Ordinary' });
+      expect(deltaCommand(B, json)).toEqual({ code: 0, stdout: json ? JSON.stringify([{
+        id: ordinary.id, kind: 'rule', scope: 'project:alpha', event: 'created', status: 'active', title: 'Ordinary',
+      }]) + '\n' : `- [${ordinary.id}] rule created: Ordinary\n`, stderr: '' });
+      expect(scan).not.toHaveBeenCalled();
+      expect(resolve).not.toHaveBeenCalled();
+      const first = createEntry(A, { kind: 'rule', title: 'First' });
+      const second = createEntry(A, { kind: 'rule', title: 'Second' });
+      const next = createEntry(A, { kind: 'rule', title: 'Merged', scope: 'project:beta' });
+      supersedeEntry(A, first.id, next.id);
+      supersedeEntry(A, second.id, next.id);
+      expect(deltaCommand(B, json).code).toBe(0);
+      expect(scan).toHaveBeenCalledExactlyOnceWith(home);
+      expect(resolve).toHaveBeenCalledExactlyOnceWith(expect.any(Array), B.now);
+    } finally { scan.mockRestore(); resolve.mockRestore(); }
+  });
+});
 
 describe('successor-aware delta', () => {
   it.each(['direct', 'chain', 'revoked'] as const)('names a %s replacement outside the reader scope without delivering it', (mode) => {

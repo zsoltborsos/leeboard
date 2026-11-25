@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util';
 import { briefCommand } from './commands/brief.js';
 import { bosun, renderBosun } from './commands/bosun.js';
 import { checkCommand } from './commands/check.js';
-import { delta, renderDelta } from './commands/delta.js';
+import { deltaCommand } from './commands/delta.js';
 import { usage as usageReport, renderUsage } from './commands/usage.js';
 import { listCommand, type ReadCtx, renderList, searchEntries, showCommand } from './commands/read.js';
 import { runReviewCommand } from './commands/review.js';
@@ -228,10 +228,8 @@ async function dispatch(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Pr
       const { data, text } = briefCommand(ctx());
       return ok(values.json ? json(data) : text);
     }
-    case 'delta': {
-      const items = delta(ctx());
-      return ok(items.length === 0 ? '' : values.json ? json(items.map(({ current, ...item }) => item)) : renderDelta(items));
-    }
+    case 'delta':
+      return deltaCommand(ctx(), values.json);
     case 'review':
       return runReviewCommand(ctx(), { peek: values.peek, json: values.json });
     case 'check':

@@ -4,6 +4,7 @@ import { describeHold } from '../format.js';
 import { latestChanges, logSize, readCursor, readLogSince, writeCursor } from '../log.js';
 import { addressedToMe, viewFor } from '../scope.js';
 import { createSuccessorResolver, listEntries } from '../store.js';
+import { json, ok, type RunResult } from '../result.js';
 
 export interface DeltaItem {
   id: string;
@@ -63,6 +64,12 @@ export function delta(ctx: Ctx): DeltaItem[] {
     items.push(item);
   }
   return items;
+}
+
+/** Own the CLI output without rendering text for JSON delivery. */
+export function deltaCommand(ctx: Ctx, jsonOutput: boolean | undefined): RunResult {
+  const items = delta(ctx);
+  return ok(items.length === 0 ? '' : jsonOutput ? json(items.map(({ current, ...item }) => item)) : renderDelta(items));
 }
 
 /** `- [id] <kind> <event or new status>: title`; holds also show their release condition. Empty for no items. */
