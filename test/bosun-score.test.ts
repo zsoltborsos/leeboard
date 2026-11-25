@@ -158,6 +158,21 @@ describe('trial scorer', () => {
     expect(scoreRun({ baselineIds: ids, entries, report: null, expected }).falseRetirements).toEqual([]);
   });
 
+  it('scores stored-active protected entries and replacements independently of deadlines without mutating them', () => {
+    const entries = after(
+      { 'rule-protected-a-0001': 'superseded' },
+      [sampleEntry({ id: 'rule-replacement-1000', author: owner, supersedes: ['rule-protected-a-0001'] })],
+    );
+    const lapsed = entries.map((entry) => entry.id === 'rule-protected-b-0002' || entry.id === 'rule-replacement-1000'
+      ? { ...entry, until: '2000-01-01' } : entry);
+    const before = structuredClone(lapsed);
+    const baseline = scoreRun({ baselineIds: ids, entries, report: null, expected });
+    const score = scoreRun({ baselineIds: ids, entries: lapsed, report: null, expected });
+    expect(baseline.protectedKept).toEqual({ hit: 2, n: 2 });
+    expect(score).toEqual(baseline);
+    expect(lapsed).toEqual(before);
+  });
+
   it('protects an owner-authored replacement through two hops', () => {
     const old = 'rule-protected-a-0001';
     const middle = sampleEntry({ id: 'rule-middle-1000', status: 'superseded', supersedes: [old] });
