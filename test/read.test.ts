@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { listCommand, renderList, searchEntries, showEntry } from '../src/commands/read.js';
@@ -6,6 +6,12 @@ import { serializeEntry } from '../src/entry.js';
 import { EXIT, LeeboardError } from '../src/errors.js';
 import { scopeDir, writeEntry } from '../src/store.js';
 import { lb, sampleEntry, tempDir } from './helpers.js';
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-17T12:00:00Z'));
+});
+afterEach(() => vi.useRealTimers());
 
 function failure(fn: () => unknown): LeeboardError {
   try {
@@ -197,6 +203,59 @@ describe('search', () => {
 
   it('needs something to search for', () => {
     expect(failure(() => searchEntries(store(), '  ')).exitCode).toBe(EXIT.USAGE);
+  });
+});
+
+describe('lapsed reads', () => {
+  function fixture() {
+    const home = tempDir();
+    const entries = [
+      sampleEntry({ id: 'rule-lapsed-0001', until: '2000-01-01' }),
+      sampleEntry({ id: 'rule-active-0002' }),
+      sampleEntry({ id: 'rule-future-0003', until: '2030-01-01' }),
+      sampleEntry({ id: 'rule-expired-0004', status: 'expired', until: '2000-01-01' }),
+      sampleEntry({ id: 'rule-released-0005', status: 'released', until: '2000-01-01' }),
+    ];
+    entries.forEach((entry, i) => {
+      entry.updated = `2026-10-17T0${9 - i}:00:00Z`;
+      writeEntry(home, entry);
+    });
+    return { home, entries };
+  }
+
+  it('filters on display status, preserving closed and author views', () => {
+    const { home, entries } = fixture();
+    const active = entries.slice(1, 3).map((e) => e.id);
+    expect(listCommand(home, {}).map((e) => e.id)).toEqual(active);
+    expect(listCommand(home, { status: 'active' }).map((e) => e.id)).toEqual(active);
+    expect(searchEntries(home, 'sample').map((e) => e.id)).toEqual(active);
+    const all = entries.map((e, i) => ({ ...e, status: i === 0 ? 'lapsed' : e.status }));
+    for (const result of [listCommand(home, { all: true }), searchEntries(home, 'sample', { all: true }),
+      listCommand(home, { session: 'A' }), listCommand(home, { harness: 'claude-code' })]) {
+      expect(result.map(({ id, status }) => ({ id, status }))).toEqual(all.map(({ id, status }) => ({ id, status })));
+    }
+    expect(listCommand(home, { status: 'lapsed' }).map((e) => e.id)).toEqual([entries[0].id]);
+    for (const status of ['expired', 'released']) {
+      expect(listCommand(home, { status }).map((e) => e.id)).toEqual(entries.filter((e) => e.status === status).map((e) => e.id));
+    }
+    expect(listCommand(home, { session: 'A', status: 'active' }).map((e) => e.id)).toEqual(active);
+    expect(renderList(listCommand(home, { all: true }))).toContain('lapsed global: Sample');
+    expect(failure(() => listCommand(home, { all: true, status: 'lapsed' })).exitCode).toBe(EXIT.USAGE);
+  });
+
+  it.each([
+    ['2026-10-17', '2026-10-17T23:59:59.999Z', 'active'],
+    ['2026-10-17', '2026-10-18T00:00:00Z', 'lapsed'],
+    ['2026-10-17T12:00:00Z', '2026-10-17T12:00:00Z', 'active'],
+    ['2026-10-17T12:00:00Z', '2026-10-17T12:00:00.001Z', 'lapsed'],
+    ['unreadable', '2026-10-17T12:00:00Z', 'active'],
+  ])('until %s at %s displays %s', (until, now, status) => {
+    vi.setSystemTime(new Date(now));
+    const home = tempDir();
+    const entry = sampleEntry({ until });
+    writeEntry(home, entry);
+    expect(listCommand(home, { status }).map((e) => e.id)).toEqual([entry.id]);
+    expect(listCommand(home, { status: status === 'active' ? 'lapsed' : 'active' })).toEqual([]);
   });
 });
 

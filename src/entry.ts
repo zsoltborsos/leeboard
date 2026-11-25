@@ -32,6 +32,7 @@ export function entryIdsIn(text: string): string[] {
 
 export const STATUSES = ['active', 'released', 'revoked', 'superseded', 'done', 'retired', 'expired'] as const;
 export type Status = (typeof STATUSES)[number];
+export type DisplayStatus = Status | 'lapsed';
 
 export const HARNESSES = ['claude-code', 'pi', 'helmraiser', 'funkyoctopus', 'bosun', 'user'] as const;
 export type Harness = (typeof HARNESSES)[number];
@@ -172,6 +173,11 @@ export function isActive(entry: Pick<Entry, 'status' | 'until'>, now: Date): boo
   if (entry.until === undefined) return true;
   const end = /^\d{4}-\d{2}-\d{2}$/.test(entry.until) ? `${entry.until}T23:59:59.999Z` : entry.until;
   return !(now.getTime() > Date.parse(end));
+}
+
+/** Display-only status; lapsed entries remain active on disk until Bosun expires them. */
+export function displayStatus(entry: Pick<Entry, 'status' | 'until'>, now: Date): DisplayStatus {
+  return entry.status === 'active' && !isActive(entry, now) ? 'lapsed' : entry.status;
 }
 
 /** Whole days untouched, only once the seven-day stale-hold threshold is reached. */
