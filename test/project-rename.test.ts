@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { EXIT } from '../src/errors.js';
 import { lb, type LbResult, tempDir } from './helpers.js';
 
 const me = { LEEBOARD_HARNESS: 'claude-code', LEEBOARD_SESSION: 'renamer' };
@@ -27,6 +28,37 @@ async function storeWithProject() {
 const file = (home: string, project: string, id: string) => join(home, 'projects', project, 'entries', `${id}.md`);
 
 describe('lb project rename', () => {
+  it.each(['bosun', 'helmraiser'])('refuses %s before changing entries or project metadata', async (harness) => {
+    const { home, rule, closed, inbound } = await storeWithProject();
+    const held = await lb(home, ['hold', '--title', 'Keep the project', '--scope', 'project:old', '--release', 'Owner agrees'], { env: me });
+    expect(held).toMatchObject({ code: 0, err: '' });
+    const hold = idOf(held);
+    const paths = [
+      join(home, 'projects', 'old', 'project.md'),
+      join(home, 'projects', 'other', 'project.md'),
+      file(home, 'old', rule),
+      file(home, 'old', closed),
+      file(home, 'other', inbound),
+      file(home, 'old', hold),
+      join(home, 'log.jsonl'),
+    ];
+    const before = paths.map((path) => readFileSync(path, 'utf8'));
+    const entries = readdirSync(join(home, 'projects', 'old', 'entries')).sort();
+
+    const result = await lb(home, ['project', 'rename', 'old', 'new', '--path', '/work/new'], {
+      env: { LEEBOARD_HARNESS: harness, LEEBOARD_SESSION: 'run-1' },
+    });
+    expect(result).toEqual({
+      code: EXIT.NOT_PERMITTED,
+      out: '',
+      err: `lb: ${harness} may not rename projects; ask the owner or an interactive session\n`,
+    });
+    expect(paths.map((path) => readFileSync(path, 'utf8'))).toEqual(before);
+    expect(readdirSync(join(home, 'projects', 'old', 'entries')).sort()).toEqual(entries);
+    expect(existsSync(join(home, 'projects', 'old'))).toBe(true);
+    expect(existsSync(join(home, 'projects', 'new'))).toBe(false);
+  });
+
   it('moves the project, every entry of any status, and requests addressed to it', async () => {
     const { home, rule, closed, inbound } = await storeWithProject();
     const result = await lb(home, ['project', 'rename', 'old', 'new', '--path', '/work/new'], { env: me });

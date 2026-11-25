@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import type { Ctx } from './context.js';
 import { EXIT, LeeboardError } from './errors.js';
 import { logChange } from './log.js';
+import { requirePermission } from './policy.js';
 import { addProject, listProjects, type Project } from './projects.js';
 import { listEntries, listEntriesWithDiagnostics, PROJECT_NAME, withRevisionLock, writeEntry } from './store.js';
 
@@ -14,6 +15,7 @@ import { listEntries, listEntriesWithDiagnostics, PROJECT_NAME, withRevisionLock
  * Safe to run again after an interruption: entries already moved are left as they are.
  */
 export function renameProject(ctx: Ctx, from: string, to: string, path?: string): Project {
+  requirePermission(ctx.identity, { action: 'project-rename' });
   const fail = (message: string): never => {
     throw new LeeboardError(message, EXIT.USAGE);
   };
