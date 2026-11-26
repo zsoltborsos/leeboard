@@ -38,6 +38,9 @@ LEEBOARD_PERF=1 npm test
 
 # The suite with the clock five years ahead: catches fixture dates that will pass
 npm run test:future
+
+# Test files that lost assertions between two commits (run it on each rework diff)
+scripts/removed-assertions.sh <reviewed-head> HEAD
 ```
 
 Tests must never touch a real store. `test/setup.ts` points `HOME` and `LEEBOARD_HOME`
